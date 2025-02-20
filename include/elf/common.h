@@ -459,6 +459,10 @@
    architecture was derived.  */
 #define EM_CSKY_OLD		EM_MCORE
 
+/* FAVOR ISA.
+ * Chosen with random number generator. */
+#define EM_FAVOR 0x2287
+
 /* See the above comment before you add a new EM_* value here.  */
 
 /* Values for e_version.  */

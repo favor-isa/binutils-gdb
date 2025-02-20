@@ -373,6 +373,8 @@ DESCRIPTION
 .#define bfd_mach_mn10300	300
 .#define bfd_mach_am33		330
 .#define bfd_mach_am33_2	332
+.  bfd_arch_favor      {* The FAVOR ISA. *}
+.#define bfd_mach_favor   1
 .  bfd_arch_fr30,
 .#define bfd_mach_fr30		0x46523330
 .  bfd_arch_frv,
@@ -643,6 +645,7 @@ extern const bfd_arch_info_type bfd_d30v_arch;
 extern const bfd_arch_info_type bfd_dlx_arch;
 extern const bfd_arch_info_type bfd_bpf_arch;
 extern const bfd_arch_info_type bfd_epiphany_arch;
+extern const bfd_arch_info_type bfd_favor_arch;
 extern const bfd_arch_info_type bfd_fr30_arch;
 extern const bfd_arch_info_type bfd_frv_arch;
 extern const bfd_arch_info_type bfd_h8300_arch;
@@ -731,6 +734,7 @@ static const bfd_arch_info_type * const bfd_archures_list[] =
     &bfd_dlx_arch,
     &bfd_bpf_arch,
     &bfd_epiphany_arch,
+    &bfd_favor_arch,
     &bfd_fr30_arch,
     &bfd_frv_arch,
     &bfd_h8300_arch,

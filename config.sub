@@ -1302,6 +1302,7 @@ case $cpu-$vendor in
 			| epiphany \
 			| f30[01] \
 			| f700 \
+			| favor \
 			| fido \
 			| fr30 \
 			| frv \

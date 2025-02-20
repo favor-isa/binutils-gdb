@@ -3788,6 +3788,11 @@ case "${target}" in
 esac
 
 case "${target}" in
+  favor-*-*)
+      noconfigdirs="$noconfigdirs gdb sim"
+      noconfigdirs="$noconfigdirs ld gprof"
+      noconfigdirs="$noconfigdirs zlib"
+    ;;
   *-*-chorusos)
     ;;
   aarch64-*-darwin*)

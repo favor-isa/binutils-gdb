@@ -953,6 +953,8 @@ extern const bfd_target z80_coff_vec;
 extern const bfd_target z80_elf32_vec;
 extern const bfd_target z8k_coff_vec;
 
+extern const bfd_target favor_elf32_vec;
+
 /* These are always included.  */
 extern const bfd_target srec_vec;
 extern const bfd_target symbolsrec_vec;
@@ -1076,6 +1078,8 @@ static const bfd_target * const _bfd_target_vector[] =
 #endif
 
 	&epiphany_elf32_vec,
+
+	&favor_elf32_vec,
 
 	&fr30_elf32_vec,
 
