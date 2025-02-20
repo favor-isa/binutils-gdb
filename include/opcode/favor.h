@@ -5,6 +5,57 @@
 
 #include <stdint.h>
 
+/* New(er) instruction type ideas:
+ * - 0 argument (halt, nop, unconditional jump, conditional jump)
+ * - 1 argument (add immediate)
+ * - 2 argument (swizzle) 
+ * - 3 argument (add a, b, c) 
+ * To distinguish between these we need at least 2 bits. But, we can also do
+ * rle nonsense if we like.
+ * That said it seems like just dedicating 2 bits to this might be best.
+ * 
+ * size field:
+ * - 1 byte signed
+ * - 2 byte signed
+ * - 4 byte signed
+ * - 8 byte signed
+ * - 1 byte unsigned
+ * - 2 byte unsigned
+ * - 4 byte unsigned
+ * - 8 byte unsigned
+ * - 4 byte float
+ * - 8 byte float
+ * 12 options... need 4 bits. So we could also just do [F][U][SZ]
+ * 
+ * Fun idea for C flag:
+ * So we want some kind of condition code flag that is used for the C instructions.
+ * But we really should have this flag equal to one of the specific condition
+ * codes in most cases. For example, we could say it's equal to the nonzero flag
+ * or maybe to the greater-than flag or something.
+ * 
+ * That way, when you have, say, a loop, you can encode the continue condition
+ * as a 00 unconditional jump with the C flag set (so it's really a conditional
+ * jump), and then the additional condition codes don't have to be checked?
+ * 
+ * Hmm. That might not actually be that useful. In fact, we would probably prefer
+ * the C flag to ONLY be set explicitly. That way, when we want conditional execution,
+ * we can do something like put multiple C instructions in a row, and then either
+ * execute ALL of them or NONE of them.
+ * 
+ * Maybe ALL instructions are conditional?
+ * [C: 1] [I_TYPE: 2]
+ * X00: 0 argument:
+ *    ~16 different instructions? 4 bits for instruction type. 
+ *    0000: singleton instructions. Other 25 bits choose the instruction. 
+ *    0001: unconditional jump relative to pc.
+ * X01: 1 argument
+ *    VV: vec
+ *      ZZ: size
+ *        AAAAA: The register
+ *             
+ *    
+ *   */
+
 /** Whether the instruction is a fixed point instruction */
 #define FAVOR_FLAG_X 0x80000000
 /** Whether the instruction is a regular register instruction */
