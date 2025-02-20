@@ -32,14 +32,55 @@ output(uint32_t code) {
     output[3] = (code >> 24) & 0xFF;
 }
 
+static char*
+skip_whitespace(char *str) {
+    while(is_whitespace(*str)) ++str;
+    return str;
+}
+
+static char*
+skip_opcode(char *str) {
+    while(!is_whitespace(*str) && (*str != '.')) ++str;
+    return str;
+}
+
+static bool
+match(char *s, char *e, const char *str) {
+    while(s != e) {
+        if(*s != *str) { return false; }
+        // *s == *str
+        if(*str == '\0') { return true; }
+        s++;
+        str++;
+    }
+
+    // now *str should be 0
+    return *str == '\0';
+}
+
+#define MATCH(s) match(op_beg, op_end, s)
+
 void
 md_assemble(char *str) {
     /* For now, if we find 'a' on the string, output 4 bytes.. */
 
-    while(*str == ' ') str++;
+    char *op_beg = skip_whitespace(str);
+    char *op_end = skip_opcode(str);
 
-    if(*str == 'a' || *str == 'b' || *str == 'c') {
-        output(0xF0F0F000 | (uint32_t)*str);
+    /* TODO: Use hash table to get opcode, as that's a thing we can do. */
+    if(MATCH("add")) {
+        output(0);
+    }
+    else if(MATCH("jmp")) {
+        output(1);
+    }
+    else if(MATCH("sub")) {
+        output(2);
+    }
+
+    // Otherwise, invalid instruction.
+    if(op_end != op_beg) {
+        as_bad("Invalid opcode.");
     }
 }
 
