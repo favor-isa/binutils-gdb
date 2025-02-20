@@ -30,9 +30,12 @@ print_insn_favor(bfd_vma addr, struct disassemble_info *info) {
     op |= (the_bytes[3] << 24);
 
     // We read the opcode, disassemble it.
-    if((op & 0xFFFFFF00) == 0xF0F0F000) {
+    if(op == 0) {
         // Toy instruction.
-        pr(stream, "%c", (char)(op & 0xFF));
+        pr(stream, "add");
+    }
+    else if(op == 1) {
+        pr(stream, "jmp"); // let sub go to (bad) for now for testing purposes
     }
     else {
         // Bad instruction.

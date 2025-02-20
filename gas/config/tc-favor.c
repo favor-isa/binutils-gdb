@@ -40,7 +40,7 @@ skip_whitespace(char *str) {
 
 static char*
 skip_opcode(char *str) {
-    while(!is_whitespace(*str) && (*str != '.')) ++str;
+    while(!is_whitespace(*str) && (*str != '.') && !is_end_of_line(*str)) ++str;
     return str;
 }
 
@@ -79,7 +79,7 @@ md_assemble(char *str) {
     }
 
     // Otherwise, invalid instruction.
-    if(op_end != op_beg) {
+    else if(op_end != op_beg) {
         as_bad("Invalid opcode.");
     }
 }
