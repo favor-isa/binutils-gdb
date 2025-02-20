@@ -68,8 +68,8 @@ md_assemble(char *str) {
     char *op_end = skip_opcode(str);
 
     /* TODO: Use hash table to get opcode, as that's a thing we can do. */
-    if(MATCH("add")) {
-        output(0);
+    if(MATCH("halt")) {
+        output(favor_assemble_r(FAVOR_RISN_HLT, 0, 0, 0, 0, 0, 0, 0));
     }
     else if(MATCH("jmp")) {
         output(1);

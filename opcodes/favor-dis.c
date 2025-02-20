@@ -30,15 +30,21 @@ print_insn_favor(bfd_vma addr, struct disassemble_info *info) {
     op |= (the_bytes[3] << 24);
 
     // We read the opcode, disassemble it.
-    if(op == 0) {
-        // Toy instruction.
-        pr(stream, "add");
+    if(op & FAVOR_FLAG_X) {
+        pr(stream, "(unknown x instruction)");
     }
-    else if(op == 1) {
-        pr(stream, "jmp"); // let sub go to (bad) for now for testing purposes
+    else if(op & FAVOR_FLAG_R) {
+        uint32_t risn = (op >> 21) & 0xFF;
+        switch(risn) {
+            case FAVOR_RISN_HLT:
+                pr(stream, "halt");
+                break;
+            default:
+                pr(stream, "(unknown r instruction)");
+                break;
+        }        
     }
     else {
-        // Bad instruction.
         pr(stream, "(bad)");
     }
 
