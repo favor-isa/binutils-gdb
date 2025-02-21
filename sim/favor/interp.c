@@ -117,11 +117,15 @@ free_state (SIM_DESC sd)
   sim_state_free (sd);
 }
 
+/* 1GB */
+#define DEFAULT_MEM_SIZE (1024 * 1024 * 1024)
+
 SIM_DESC
 sim_open (SIM_OPEN_KIND kind, host_callback *cb,
 	  struct bfd *abfd, char * const *argv)
 {
   int i;
+  uint32_t buf;
   SIM_DESC sd = sim_state_alloc (kind, cb);
   SIM_ASSERT (STATE_MAGIC (sd) == SIM_MAGIC_NUMBER);
 
@@ -185,7 +189,10 @@ sim_open (SIM_OPEN_KIND kind, host_callback *cb,
         // TODO: Reset register state.
     }
 
-  return sd;
+    if (sim_core_read_buffer (sd, NULL, read_map, &buf, 4, 1) == 0)
+        sim_do_commandf (sd, "memory-size %#x", DEFAULT_MEM_SIZE);
+
+    return sd;
 }
 
 SIM_RC
