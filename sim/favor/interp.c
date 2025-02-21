@@ -62,15 +62,18 @@ sim_engine_run (SIM_DESC sd,
   /* Run instructions here. */
     for(;;) {
         uint32_t op = fetch_code(scpu, cpu);
-
         struct favor_insn insn = favor_decode(op);
+        void *pc_addr = (void*)cpu->pc;
 
-        printf("insn: %x (kind = %d)\n", op, insn.kind);
+        TRACE_EXTRACT(scpu, "%p: %#08x", pc_addr, op);
 
         switch(insn.kind) {
             case FAVOR_K0:
+                TRACE_DECODE(scpu, "%p: %c k0 %#x %#08x", pc_addr, (insn.c ? 'c' : 'u'), insn.k0_code, insn.k0_imm);
+
                 switch(insn.k0_code) {
                     case FAVOR_HALT:
+                        TRACE_INSN(scpu, "%p: halt", pc_addr);
                         /* Done. sigrc param is exit code. Maybe put a0 there? */
                         sim_engine_halt(sd, scpu, NULL, cpu->pc, sim_exited, 0);
                 }
@@ -208,12 +211,12 @@ sim_create_inferior (SIM_DESC sd, struct bfd *prog_bfd,
   (void)env;
   (void)scpu;
 
-  printf("sim create inferior called.\n");
+  //printf("sim create inferior called.\n");
 
   // load the starting address. TODO
   if (prog_bfd != NULL) {
     cpu->pc = bfd_get_start_address(prog_bfd);
-    printf("set pc to start address @ %lx\n", cpu->pc);
+    //printf("set pc to start address @ %lx\n", cpu->pc);
   }
     
   //  cpu.asregs.regs[PC_REGNO] = bfd_get_start_address (prog_bfd);
