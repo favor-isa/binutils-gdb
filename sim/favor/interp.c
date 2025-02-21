@@ -48,6 +48,9 @@ sim_engine_run (SIM_DESC sd,
   /* Run instructions here. */
     for(;;) {
         printf("hello world...\n");
+
+        // Necessary to e.g. kill the program.
+        if (sim_events_tick (sd)) sim_events_process (sd);
     }
 }
 
