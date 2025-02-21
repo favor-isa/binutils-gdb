@@ -69,7 +69,7 @@ md_assemble(char *str) {
 
     /* TODO: Use hash table to get opcode, as that's a thing we can do. */
     if(MATCH("halt")) {
-        output(favor_assemble_r(FAVOR_RISN_HLT, 0, 0, 0, 0, 0, 0, 0));
+        output(favor_encode(favor_k0_insn(0, FAVOR_HALT, 0)));
     }
     else if(MATCH("jmp")) {
         output(1);

@@ -30,22 +30,32 @@ print_insn_favor(bfd_vma addr, struct disassemble_info *info) {
     op |= (the_bytes[3] << 24);
 
     // We read the opcode, disassemble it.
-    if(op & FAVOR_FLAG_X) {
-        pr(stream, "(unknown x instruction)");
-    }
-    else if(op & FAVOR_FLAG_R) {
-        uint32_t risn = (op >> 21) & 0xFF;
-        switch(risn) {
-            case FAVOR_RISN_HLT:
-                pr(stream, "halt");
-                break;
-            default:
-                pr(stream, "(unknown r instruction)");
-                break;
-        }        
-    }
-    else {
-        pr(stream, "(bad)");
+    struct favor_insn insn = favor_decode(op);
+
+    switch(insn.kind) {
+        case FAVOR_K0:
+            switch(insn.k0_code) {
+                case FAVOR_HALT:
+                    pr(stream, "halt");
+                    break;
+                default:
+                    pr(stream, "(bad k0)");
+                    break;
+            };
+            break;
+        case FAVOR_K1:
+            switch(insn.k1_code) {
+                default:
+                    pr(stream, "(bad k1)");
+                    break;
+            };
+            break;
+        case FAVOR_K2:
+            pr(stream, "(bad k2)");
+            break;
+        case FAVOR_K3:
+            pr(stream, "(bad k3)");
+            break;
     }
 
     return 4; // The number of bytes to advance. -1 on error?

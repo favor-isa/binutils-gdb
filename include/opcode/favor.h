@@ -60,26 +60,14 @@
  *    
  *   */
 
-/** Whether the instruction is a fixed point instruction */
-#define FAVOR_FLAG_X 0x80000000
-/** Whether the instruction is a regular register instruction */
-#define FAVOR_FLAG_R 0X40000000
 
-#define FAVOR_IISN_LDI 0
-#define FAVOR_IISN_JMP 2
-#define FAVOR_IISN_LDH 3
-#define FAVOR_IISN_ADD 4
-/**
- * Load and jump: Loads constant values based on the sz * vec,
- * then jumps over that much data. */
-#define FAVOR_IISN_LDJ 5
+/* Instruction kind: 0 arg, 1 arg, 2 arg, 3 arg */
+#define FAVOR_K0       0
+#define FAVOR_K1       1
+#define FAVOR_K2       2
+#define FAVOR_K3       3
 
-#define FAVOR_RISN_HLT 0
-#define FAVOR_RISN_ADD 1
-/* Store <dst> at <op1> + <op2> * sizeof(op) * 1 */
-#define FAVOR_RISN_ST1 2
-/* Load <dst> from <op1> + <op2> * sizeof(op) * 1 */
-#define FAVOR_RISN_LD1 3
+#define FAVOR_HALT     0
 
 #define FAVOR_REG_ZERO 0
 #define FAVOR_REG_A0   8
@@ -104,39 +92,95 @@
 #define FAVOR_C_UNCONDITIONAL 0
 #define FAVOR_C_CONDITIONAL   1
 
+/**
+ * Helper struct for easily encoding / decoding instructions.
+ */
+struct favor_insn {
+    uint32_t c :    1;
+    uint32_t kind : 2;
+    union {
+        struct {
+            uint32_t k0_code : 4;
+            uint32_t k0_imm  : 25;
+        };
+
+        struct {
+            uint32_t vec  : 2;
+            uint32_t sz   : 2;
+            uint32_t reg0 : 5;
+            union {
+                uint32_t k1_code : 4;
+                uint32_t k1_imm  : 16;
+            };
+        };
+    };
+};
+
 static inline
-uint32_t
-favor_assemble_i(uint32_t iisn, uint32_t imm, uint32_t reg, uint32_t sz, uint32_t vec, uint32_t c) {
-    c    = c    & 0x01;
-    vec  = vec  & 0x03;
-    sz   = sz   & 0x03;
-    reg  = reg  & 0x1F;
-    iisn = iisn & 0x1F;
-    imm  = imm  & 0xFFFF;
-    return (c << 0) | (vec << 1) | (sz << 3) | (reg << 5) | (imm << 10) | (iisn << 26);
+struct favor_insn
+favor_k0_insn(uint32_t c, uint32_t op, uint32_t imm) {
+    struct favor_insn insn;
+    insn.c = c;
+    insn.kind = FAVOR_K0;
+    insn.k0_code = op;
+    insn.k0_imm = imm;
+    return insn;
 }
 
 static inline
 uint32_t
-favor_assemble_r(uint32_t risn, uint32_t u, uint32_t dst, uint32_t op1, uint32_t op2, uint32_t sz, uint32_t vec, uint32_t c) {
-    risn = risn & 0xFF;
-    u    = u    & 0x01;
-    dst  = dst  & 0x1F;
-    op1  = op1  & 0x1F;
-    op2  = op2  & 0x1F;
-    sz   = sz   & 0x03;
-    vec  = vec  & 0x03;
-    c    = c    & 0x01;
-    return
-        FAVOR_FLAG_R |
-        (c    <<  0) |
-        (vec  <<  1) |
-        (sz   <<  3) |
-        (op2  <<  5) |
-        (op1  << 10) |
-        (dst  << 15) |
-        (u    << 20) |
-        (risn << 21);
+favor_encode(struct favor_insn insn) {
+    uint32_t value = 0;
+    value |= (insn.c    << 31);
+    value |= (insn.kind << 29);
+
+    // All other ones have a vec, sz, reg0
+    if(insn.kind != FAVOR_K0) {
+        insn.vec |= (insn.vec << 27);
+        insn.sz  |= (insn.sz  << 25);
+    }
+
+    switch(insn.kind) {
+        case FAVOR_K0:
+            value |= (insn.k0_code << 25);
+            value |= (insn.k0_imm  << 0);
+            break;
+        case FAVOR_K1:
+            value |= (insn.k1_code << 16);
+            value |= (insn.k1_imm  << 0);
+            break;
+        
+    }
+
+    return value;
+}
+
+static inline
+struct favor_insn
+favor_decode(uint32_t code) {
+    struct favor_insn insn;
+
+    // Do bitfields automatically get masked out? Convenient if true.
+    insn.c    = (code >> 31);
+    insn.kind = (code >> 29);
+
+    if(insn.kind != FAVOR_K0) {
+        insn.vec = (code >> 27);
+        insn.sz  = (code >> 25);
+    }
+
+    switch(insn.kind) {
+        case FAVOR_K0:
+            insn.k0_code = (code >> 25);
+            insn.k0_imm  = (code >>  0);
+            break;
+        case FAVOR_K1:
+            insn.k1_code = (code >> 16);
+            insn.k1_imm  = (code >>  0);
+            break;
+    }
+
+    return insn;
 }
 
 #endif
