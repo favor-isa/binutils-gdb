@@ -6,6 +6,8 @@
 
 struct favor_sim_cpu {
     uint64_t gpr[32];
+
+    uint64_t pc;
 };
 
 #endif

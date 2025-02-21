@@ -38,6 +38,17 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 #include "target-newlib-syscall.h"
 
 #include "favor-sim.h"
+#include "opcode/favor.h"
+
+static uint32_t
+fetch_code(sim_cpu *scpu, struct favor_sim_cpu *cpu) {
+    uint32_t code = 0;
+    code |= sim_core_read_aligned_1(scpu, cpu->pc, read_map, cpu->pc);
+    code |= (sim_core_read_aligned_1(scpu, cpu->pc + 1, read_map, cpu->pc) << 8);
+    code |= (sim_core_read_aligned_1(scpu, cpu->pc + 2, read_map, cpu->pc) << 16);
+    code |= (sim_core_read_aligned_1(scpu, cpu->pc + 3, read_map, cpu->pc) << 24);
+    return code;
+}
 
 void
 sim_engine_run (SIM_DESC sd,
@@ -45,9 +56,28 @@ sim_engine_run (SIM_DESC sd,
 		int nr_cpus, /* ignore  */
 		int signal) /* ignore  */
 {
+    sim_cpu *scpu = STATE_CPU(sd, 0);
+    struct favor_sim_cpu *cpu = scpu->arch_data;
+
   /* Run instructions here. */
     for(;;) {
-        printf("hello world...\n");
+        uint32_t op = fetch_code(scpu, cpu);
+
+        struct favor_insn insn = favor_decode(op);
+
+        printf("insn: %x (kind = %d)\n", op, insn.kind);
+
+        switch(insn.kind) {
+            case FAVOR_K0:
+                switch(insn.k0_code) {
+                    case FAVOR_HALT:
+                        /* Done. sigrc param is exit code. Maybe put a0 there? */
+                        sim_engine_halt(sd, scpu, NULL, cpu->pc, sim_exited, 0);
+                }
+                break;
+            default:
+                break;
+        }
 
         // Necessary to e.g. kill the program.
         if (sim_events_tick (sd)) sim_events_process (sd);
@@ -163,6 +193,7 @@ sim_create_inferior (SIM_DESC sd, struct bfd *prog_bfd,
 		     char * const *argv, char * const *env)
 {
   sim_cpu *scpu = STATE_CPU (sd, 0); /* FIXME */
+  struct favor_sim_cpu *cpu = scpu->arch_data;
 
   (void)sd;
   (void)prog_bfd;
@@ -170,8 +201,14 @@ sim_create_inferior (SIM_DESC sd, struct bfd *prog_bfd,
   (void)env;
   (void)scpu;
 
+  printf("sim create inferior called.\n");
+
   // load the starting address. TODO
-  //if (prog_bfd != NULL)
+  if (prog_bfd != NULL) {
+    cpu->pc = bfd_get_start_address(prog_bfd);
+    printf("set pc to start address @ %lx\n", cpu->pc);
+  }
+    
   //  cpu.asregs.regs[PC_REGNO] = bfd_get_start_address (prog_bfd);
 
       /* Store the string.  */
