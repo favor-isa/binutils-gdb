@@ -39,22 +39,22 @@ print_insn_favor(bfd_vma addr, struct disassemble_info *info) {
                     pr(stream, "halt");
                     break;
                 default:
-                    pr(stream, "(bad k0)");
+                    pr(stream, "bad0.%d\t0x%x", insn.k0_code, insn.k0_imm);
                     break;
             };
             break;
         case FAVOR_K1:
             switch(insn.k1_code) {
                 default:
-                    pr(stream, "(bad k1)");
+                    pr(stream, "bad1.%d\t0x%x", insn.k1_code, insn.k1_imm);
                     break;
             };
             break;
         case FAVOR_K2:
-            pr(stream, "(bad k2)");
+            pr(stream, "bad2.unknown");
             break;
         case FAVOR_K3:
-            pr(stream, "(bad k3)");
+            pr(stream, "bad3.unknown");
             break;
     }
 
