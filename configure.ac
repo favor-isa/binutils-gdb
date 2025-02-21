@@ -1011,7 +1011,7 @@ esac
 
 case "${target}" in
   favor-*-*)
-    noconfigdirs="$noconfigdirs gdb sim"
+    noconfigdirs="$noconfigdirs gdb"
     noconfigdirs="$noconfigdirs ld gprof"
     noconfigdirs="$noconfigdirs zlib"
     ;;
