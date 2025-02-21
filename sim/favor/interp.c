@@ -44,9 +44,9 @@ static uint32_t
 fetch_code(sim_cpu *scpu, struct favor_sim_cpu *cpu) {
     uint32_t code = 0;
     code |= sim_core_read_aligned_1(scpu, cpu->pc, read_map, cpu->pc);
-    code |= (sim_core_read_aligned_1(scpu, cpu->pc + 1, read_map, cpu->pc) << 8);
-    code |= (sim_core_read_aligned_1(scpu, cpu->pc + 2, read_map, cpu->pc) << 16);
-    code |= (sim_core_read_aligned_1(scpu, cpu->pc + 3, read_map, cpu->pc) << 24);
+    code |= (sim_core_read_aligned_1(scpu, cpu->pc + 1, read_map, cpu->pc + 1) << 8);
+    code |= (sim_core_read_aligned_1(scpu, cpu->pc + 2, read_map, cpu->pc + 2) << 16);
+    code |= (sim_core_read_aligned_1(scpu, cpu->pc + 3, read_map, cpu->pc + 3) << 24);
     return code;
 }
 
@@ -76,11 +76,20 @@ sim_engine_run (SIM_DESC sd,
                         TRACE_INSN(scpu, "%p: halt", pc_addr);
                         /* Done. sigrc param is exit code. Maybe put a0 there? */
                         sim_engine_halt(sd, scpu, NULL, cpu->pc, sim_exited, 0);
+                        break;
+                    default:
+                        /* Illegal instruction. SIGILL */
+                        TRACE_INSN(scpu, "%p: bad0.%d %#x", pc_addr, insn.k0_code, insn.k0_imm);
+                        sim_engine_halt(sd, scpu, NULL, cpu->pc, sim_stopped, SIGILL);
+                        break;
                 }
                 break;
             default:
                 break;
         }
+
+        // Increase pc.
+        cpu->pc += 4;
 
         // Necessary to e.g. kill the program.
         if (sim_events_tick (sd)) sim_events_process (sd);
