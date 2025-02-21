@@ -67,6 +67,12 @@
 #define FAVOR_K2       2
 #define FAVOR_K3       3
 
+enum {
+    OP_K0_SINGLETON = 0,
+
+    OP_SNG_HALT = 0
+};
+
 #define FAVOR_HALT     0
 
 #define FAVOR_REG_ZERO 0
@@ -125,6 +131,12 @@ favor_k0_insn(uint32_t c, uint32_t op, uint32_t imm) {
     insn.k0_code = op;
     insn.k0_imm = imm;
     return insn;
+}
+
+static inline
+struct favor_insn
+favor_singleton(uint32_t c, uint32_t op) {
+    return favor_k0_insn(c, OP_K0_SINGLETON, op);
 }
 
 static inline

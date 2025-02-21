@@ -72,10 +72,21 @@ sim_engine_run (SIM_DESC sd,
                 TRACE_DECODE(scpu, "%p: %c k0 %#x %#08x", pc_addr, (insn.c ? 'c' : 'u'), insn.k0_code, insn.k0_imm);
 
                 switch(insn.k0_code) {
-                    case FAVOR_HALT:
-                        TRACE_INSN(scpu, "%p: halt", pc_addr);
-                        /* Done. sigrc param is exit code. Maybe put a0 there? */
-                        sim_engine_halt(sd, scpu, NULL, cpu->pc, sim_exited, 0);
+                    case OP_K0_SINGLETON:
+                        /* Singleton opcodes. */
+                        TRACE_DECODE(scpu, "%p: %c singleton #%08x", pc_addr, (insn.c ? 'c' : 'u'), insn.k0_imm);
+                        switch(insn.k0_imm) {
+                          OP_SNG_HALT:
+                            TRACE_INSN(scpu, "%p: halt", pc_addr);
+                            /* Done. sigrc param is exit code. Maybe put a0 there? */
+                            sim_engine_halt(sd, scpu, NULL, cpu->pc, sim_exited, 0);
+                            break;
+                          default:
+                            /* Illegal instruction. SIGILL */
+                            TRACE_INSN(scpu, "%p: badsng %#x", pc_addr, insn.k0_imm);
+                            sim_engine_halt(sd, scpu, NULL, cpu->pc, sim_stopped, SIGILL);
+                            break;
+                        }
                         break;
                     default:
                         /* Illegal instruction. SIGILL */
