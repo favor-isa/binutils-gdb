@@ -7,9 +7,13 @@
 
 /* New(er) instruction type ideas:
  * - 0 argument (halt, nop, unconditional jump, conditional jump)
- * - 1 argument (add immediate)
- * - 2 argument (swizzle) 
+ * - 1 argument (add immediate (?), rotate (?))
+ *     - these might be needed due to bit availability constraints. a += 3,
+ *       cause we can't easily do a = b + 3.
+ * - 2 argument (swizzle, compute length, negate, invert) 
+ *     - these often correspond to unary operations.  a = -b
  * - 3 argument (add a, b, c) 
+ *     - these often correspond to binary operations. a = x + y
  * To distinguish between these we need at least 2 bits. But, we can also do
  * rle nonsense if we like.
  * That said it seems like just dedicating 2 bits to this might be best.
