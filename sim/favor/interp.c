@@ -100,7 +100,7 @@ sim_engine_run (SIM_DESC sd,
         }
 
         // Increase pc.
-        cpu->pc += 4;
+        CPU_PC_SET(scpu, cpu->pc + 4);
 
         // Necessary to e.g. kill the program.
         if (sim_events_tick (sd)) sim_events_process (sd);
@@ -122,13 +122,13 @@ favor_reg_fetch (SIM_CPU *scpu, int rn, void *memory, int length)
 static sim_cia
 favor_pc_get (sim_cpu *cpu)
 {
-    return 0;
+    return FAVOR_SIM_CPU(cpu)->pc;
 }
 
 static void
 favor_pc_set (sim_cpu *cpu, sim_cia pc)
 {
-    /* TODO */
+    FAVOR_SIM_CPU(cpu)->pc = pc;
 }
 
 static void
