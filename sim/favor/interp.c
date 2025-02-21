@@ -35,6 +35,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 #include "sim-options.h"
 #include "sim-io.h"
 #include "sim-signal.h"
+#include "sim-syscall.h"
 #include "target-newlib-syscall.h"
 
 #include "favor-sim.h"
@@ -72,14 +73,26 @@ sim_engine_run (SIM_DESC sd,
                 TRACE_DECODE(scpu, "%p: %c k0 %#x %#08x", pc_addr, (insn.c ? 'c' : 'u'), insn.k0_code, insn.k0_imm);
 
                 switch(insn.k0_code) {
-                    case OP_K0_SINGLETON:
+                    case OP_K0_SINGLETON: {
+                        uint32_t imm = insn.k0_imm;
                         /* Singleton opcodes. */
                         TRACE_DECODE(scpu, "%p: %c singleton #%08x", pc_addr, (insn.c ? 'c' : 'u'), insn.k0_imm);
-                        switch(insn.k0_imm) {
-                          OP_SNG_HALT:
+                        
+                        switch(imm) {
+                          case OP_SNG_HALT:
                             TRACE_INSN(scpu, "%p: halt", pc_addr);
                             /* Done. sigrc param is exit code. Maybe put a0 there? */
                             sim_engine_halt(sd, scpu, NULL, cpu->pc, sim_exited, 0);
+                            break;
+                          case OP_SNG_SYSCALL:
+                            TRACE_INSN(scpu, "%p: syscall", pc_addr);
+                            /* TODO: Truncate the values in a well-defined way. */
+                            sim_syscall(scpu,
+                                (int)cpu->gpr[FAVOR_REG_A0],
+                                (long)cpu->gpr[FAVOR_REG_A1],
+                                (long)cpu->gpr[FAVOR_REG_A2],
+                                (long)cpu->gpr[FAVOR_REG_A3],
+                                (long)cpu->gpr[FAVOR_REG_A4]);
                             break;
                           default:
                             /* Illegal instruction. SIGILL */
@@ -88,6 +101,7 @@ sim_engine_run (SIM_DESC sd,
                             break;
                         }
                         break;
+                      }
                     default:
                         /* Illegal instruction. SIGILL */
                         TRACE_INSN(scpu, "%p: bad0.%d %#x", pc_addr, insn.k0_code, insn.k0_imm);
@@ -224,6 +238,7 @@ sim_create_inferior (SIM_DESC sd, struct bfd *prog_bfd,
 {
   sim_cpu *scpu = STATE_CPU (sd, 0); /* FIXME */
   struct favor_sim_cpu *cpu = scpu->arch_data;
+  char test_syscall[13] = "hello world\n";
 
   (void)sd;
   (void)prog_bfd;
@@ -238,6 +253,15 @@ sim_create_inferior (SIM_DESC sd, struct bfd *prog_bfd,
     cpu->pc = bfd_get_start_address(prog_bfd);
     //printf("set pc to start address @ %lx\n", cpu->pc);
   }
+
+  /* Test setup for syscall. */
+  
+  sim_core_write_buffer(sd, scpu, write_map, test_syscall, 0x5000, 13);
+
+  cpu->gpr[FAVOR_REG_A0] = CB_SYS_write;
+  cpu->gpr[FAVOR_REG_A1] = 1; /* STDOUT_FILENO */
+  cpu->gpr[FAVOR_REG_A2] = 0x5000; /* buffer */
+  cpu->gpr[FAVOR_REG_A3] = 12;     /* length */
     
   //  cpu.asregs.regs[PC_REGNO] = bfd_get_start_address (prog_bfd);
 

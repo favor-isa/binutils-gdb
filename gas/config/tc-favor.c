@@ -71,6 +71,9 @@ md_assemble(char *str) {
     if(MATCH("halt")) {
         output(favor_encode(favor_singleton(0, OP_SNG_HALT)));
     }
+    else if(MATCH("syscall")) {
+        output(favor_encode(favor_singleton(0, OP_SNG_SYSCALL)));
+    }
     else if(MATCH("jmp")) {
         output(1);
     }

@@ -70,7 +70,8 @@
 enum {
     OP_K0_SINGLETON = 0,
 
-    OP_SNG_HALT = 0
+    OP_SNG_HALT = 0,
+    OP_SNG_SYSCALL = 1,
 };
 
 #define FAVOR_HALT     0
