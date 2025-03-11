@@ -51,14 +51,81 @@
  * X00: 0 argument:
  *    ~16 different instructions? 4 bits for instruction type. 
  *    0000: singleton instructions. Other 25 bits choose the instruction. 
+ *        - halt
+ *        - nop
+ *        - syscall
+ *        - return
+ *        - return_if_null
  *    0001: unconditional jump relative to pc.
+ *    0010: unconditional jump-and-link relative to pc.
  * X01: 1 argument
  *    VV: vec
  *      ZZ: size
  *        AAAAA: The register
+ *             CCCC: The instruction
+ *                 iiii iiii iiii iiii: immediate value
+ * 1-op instructions we want:
+ * - load immediate
+ * - load upper immediate
+ * - load upper upper immediate
+ * - load upper upper upper immediate
+ * - add with immediate
+ * - sub with immediate
+ * - 
  *             
- *    
- *   */
+ * X10: 2 argument
+ *    VV: vec
+ *      ZZ: size
+ *        AAAAA: Dest
+ *             BBBBB: Src
+ *                  IIIII IIIII IIIII: Instruction
+ * 2-op instructions we want:
+ * - multiply
+ * - divide
+ * - normalize
+ * - length
+ * - dot product?
+ * - cross product?
+ * - comparison? 
+ * - swizzle
+ * - format conversion
+ * - bitwise not
+ * - bitwise shifts
+ * - negate
+ * - logical not?
+ * 
+ *
+ * X11: 3 argument
+ *    VV: vec
+ *      ZZ: size
+ *        AAAAA: dest
+ *             BBBBB: src1
+ *                  CCCCC: src2
+ *                       IIIII IIIII: Instruction (1024 options?)
+ * 3-op instructions we want:
+ * - add
+ * - sub
+ * - min (note: needs float/signed/unsigned disctinction)
+ * - max
+ * - min-of-components
+ * - max-of-components
+ * - bitwise and
+ * - bitwise or
+ * - // this shuld be two arg: bitwise not
+ * - logical and?
+ * - logical or?
+ * - load/store:
+ *   - many flags.
+ *   - ld a0, [a1 + 4 * a2 + 4]
+ *   - so we have:
+ *     - multiply value for second arg (?)
+ *     - constant offset val
+ *     - some masking operations:
+ *       - is the src1 pointer masked?
+ *       - is the src2 offset masked?
+ *       - the expression result is always masked (no unaligned load/stores)
+ *     - is the load/store atomic? (?)
+ */
 
 
 /* Instruction kind: 0 arg, 1 arg, 2 arg, 3 arg */
