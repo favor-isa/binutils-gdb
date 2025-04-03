@@ -129,64 +129,216 @@
 
 
 /* Instruction kind: 0 arg, 1 arg, 2 arg, 3 arg */
-#define FAVOR_K0       0
-#define FAVOR_K1       1
-#define FAVOR_K2       2
-#define FAVOR_K3       3
-
-enum {
-    OP_K0_SINGLETON = 0,
-
-    OP_SNG_HALT = 0,
-    OP_SNG_SYSCALL = 1,
+enum opcode {
+    OP_CC_MISC,
+    OP_JUMP,
+    OP_INT3,
+    OP_INT2,
+    OP_FLOAT3,
+    OP_FLOAT2,
+    OP_FIX2,
+    OP_LOAD,
+    OP_STORE,
+    OP_LS_SPECIAL,
 };
 
-#define FAVOR_HALT     0
+enum cc_misc {
+    CCM_ILL = 0,
+    CCM_NOP,
+    CCM_SYSCALL,
+    CCM_SETEQ,
+    CCM_SETNE,
+    CCM_SETG,
+    CCM_SETL,
+    CCM_SETGE,
+    CCM_SETLE,
+    CCM_TEST, /* Test the dest register, set C = 1 if the bit is set */
+    CCM_READC,
+    CCM_WRITEC,
+    CCM_WRITEC_IMM,
+};
 
-#define FAVOR_REG_ZERO 0
-#define FAVOR_REG_A0   8
-#define FAVOR_REG_A1   9
-#define FAVOR_REG_A2   10
-#define FAVOR_REG_A3   11
-#define FAVOR_REG_A4   12
-#define FAVOR_REG_A5   13
-#define FAVOR_REG_A6   14
-#define FAVOR_REG_A7   15
+enum jump {
+    J_JUMP,
+    J_BEQ,
+    J_BNE,
+    J_BL,
+    J_BG,
+    J_BLE,
+    J_BGE,
+    J_BLU,
+    J_BGU,
+    J_BLEU,
+    J_BGEU,
 
-#define FAVOR_SZ_BYTE 0
-#define FAVOR_SZ_HALF 1
-#define FAVOR_SZ_WORD 2
-#define FAVOR_SZ_LONG 3
+    JC_JUMP,
+    JC_BEQ,
+    JC_BNE,
+    JC_BL,
+    JC_BG,
+    JC_BLE,
+    JC_BGE,
+    JC_BLU,
+    JC_BGU,
+    JC_BLEU,
+    JC_BGEU,
 
-#define FAVOR_VEC1 0
-#define FAVOR_VEC2 1
-#define FAVOR_VEC3 2
-#define FAVOR_VEC4 3
+    JIC_JUMP,
+    JIC_BEQ,
+    JIC_BNE,
+    JIC_BL,
+    JIC_BG,
+    JIC_BLE,
+    JIC_BGE,
+    JIC_BLU,
+    JIC_BGU,
+    JIC_BLEU,
+    JIC_BGEU,
+};
 
-#define FAVOR_C_UNCONDITIONAL 0
-#define FAVOR_C_CONDITIONAL   1
+enum int3 {
+    I3_ADD,
+    I3_SUB,
+    I3_LSH,
+    I3_RSHU,
+    I3_RSHS,
+    I3_ROL,
+    I3_ROR,
+    I3_AND,
+    I3_OR,
+    I3_XOR,
+    I3_MINS,
+    I3_MINU,
+    I3_MAXS,
+    I3_MAXU,
+    I3_LOG_AND,
+    I3_LOG_OR,
+    I3_SAT_ADDS,
+    I3_SAT_ADDU,
+    I3_SAT_SUBS,
+    I3_SAT_SUBU
+};
+
+enum int2 {
+    I2_NEGATE,
+    I2_NOT,
+    I2_LOG_NOT,
+    I2_LOG_IDENTITY,
+    I2_CMP,
+    I2_SWIZZLE, /* Requires 8-bit arg */
+};
+
+enum float3 {
+    F3_ADD,
+    F3_SUB,
+    F3_MIN,
+    F3_MAX,
+    F3_MUL,
+    F3_DIV,
+    
+    F3_NORM,
+    F3_LENGTH,
+    F3_DOT,
+};
+
+enum float2 {
+    F2_NEGATE,
+    F2_CMP,
+    F2_SWIZZLE,
+};
+
+/* TODO:
+ * Consider combining int3 + int2 into one chunk, and
+ * float3 + float2 into one chunk. */
 
 /**
  * Helper struct for easily encoding / decoding instructions.
  */
-struct favor_insn {
-    uint32_t c :    1;
-    uint32_t kind : 2;
+struct insn {
+    uint32_t opcode : 4;
     union {
         struct {
-            uint32_t k0_code : 4;
-            uint32_t k0_imm  : 25;
-        };
+            uint32_t conditional : 1;
+            uint32_t dest : 5;
+            uint32_t shift : 6;
+            uint32_t is_return : 1;
+            uint32_t vec : 2;
+            uint32_t funct : 13;
+        } cc_misc;
 
         struct {
-            uint32_t vec  : 2;
-            uint32_t sz   : 2;
-            uint32_t reg0 : 5;
-            union {
-                uint32_t k1_code : 4;
-                uint32_t k1_imm  : 16;
-            };
-        };
+            uint32_t funct : 5;
+            uint32_t and_link : 1;
+            uint32_t immediate : 23;
+        } jump;
+
+        struct {
+            uint32_t conditional : 1;
+            uint32_t dest : 5;
+            uint32_t src1 : 5;
+            uint32_t src2 : 5;
+            uint32_t sz : 2;
+            uint32_t vec : 2;
+            uint32_t funct : 8; 
+        } int3;
+
+        struct {
+            uint32_t conditional : 1;
+            uint32_t dest : 5;
+            uint32_t src1 : 5;
+            uint32_t sz : 2;
+            uint32_t vec : 2;
+            uint32_t funct : 13;
+        } int2;
+
+        struct {
+            uint32_t conditional : 1;
+            uint32_t dest : 5;
+            uint32_t src1 : 5;
+            uint32_t src2 : 5;
+            uint32_t sz : 1;
+            uint32_t vec : 2;
+            uint32_t funct : 9; 
+        } float3;
+
+        struct {
+            uint32_t conditional : 1;
+            uint32_t dest : 5;
+            uint32_t src1 : 5;
+            uint32_t sz : 1;
+            uint32_t vec : 2;
+            uint32_t funct : 14;
+        } float2;
+
+        struct {
+            uint32_t conditional : 1;
+            uint32_t dest : 5;
+            uint32_t src1 : 5;
+            uint32_t sz : 2;
+            uint32_t vec : 2;
+            uint32_t funct : 13;
+        } fix2;
+
+        struct {
+            uint32_t conditional : 1;
+            uint32_t dest : 5;
+            uint32_t src1 : 5;
+            uint32_t src2 : 5;
+            uint32_t sz : 2;
+            uint32_t vec : 2;
+            uint32_t fp : 1;
+            uint32_t offset : 5;
+            uint32_t shift : 2;
+        } ls; /* load-store */
+
+        struct {
+            uint32_t conditional : 1;
+            uint32_t dest : 5;
+            uint32_t src1 : 5;
+            uint32_t vec : 2;
+            uint32_t fp : 1;
+            uint32_t etc : 19;
+        } ls_special;
     };
 };
 
