@@ -18,11 +18,11 @@ pr_cond(fprintf_ftype pr, void *stream, uint32_t conditional) {
 }
 
 void
-pr_type(fprintf_ftype pr, void *stream, uint32_t fp, uint32_t sign, uint32_t sz, uint32_t vec) {
+pr_type(fprintf_ftype pr, void *stream, uint32_t fp, uint32_t is_signed, uint32_t sz, uint32_t vec) {
     pr(stream, ".");
 
     if(fp) pr(stream, "f");
-    else if(sign) { pr(stream, "s"); }
+    else if(is_signed) { pr(stream, "s"); }
     else { pr(stream, "u"); }
 
     switch(sz) {
@@ -111,17 +111,38 @@ print_insn_favor(bfd_vma addr, struct disassemble_info *info) {
                     break;
             };
             break;
-        case OP_INT3:
+        case OP_INT3: {
             pr_cond(pr, stream, insn.int3.conditional);
+            uint32_t is_signed = 0;
             switch(insn.int3.funct) {
                 case I3_ADD: pr(stream, "add"); break;
+                case I3_SUB: pr(stream, "sub"); break;
+                case I3_LSH: pr(stream, "lsh"); break;
+                case I3_RSHU: pr(stream, "rsh"); is_signed = 0; break;
+                case I3_RSHS: pr(stream, "rsh"); is_signed = 1; break;
+                case I3_ROL: pr(stream, "rol"); break;
+                case I3_ROR: pr(stream, "ror"); break;
+                case I3_AND: pr(stream, "and"); break;
+                case I3_OR: pr(stream, "or"); break;
+                case I3_XOR: pr(stream, "xor"); break;
+                case I3_MINS: pr(stream, "min"); is_signed = 1; break;
+                case I3_MINU: pr(stream, "min"); is_signed = 0; break;
+                case I3_MAXS: pr(stream, "max"); is_signed = 1; break;
+                case I3_MAXU: pr(stream, "max"); is_signed = 0; break;
+                case I3_LOG_AND: pr(stream, "logand"); break;
+                case I3_LOG_OR: pr(stream, "logor"); break;
+                case I3_SAT_ADDS: pr(stream, "satadd"); is_signed = 1; break;
+                case I3_SAT_ADDU: pr(stream, "satadd"); is_signed = 0; break;
+                case I3_SAT_SUBS: pr(stream, "satsub"); is_signed = 1; break;
+                case I3_SAT_SUBU: pr(stream, "satsub"); is_signed = 0; break;
             }
-            pr_type(pr, stream, 0, 0, insn.int3.sz, insn.int3.vec);
+            pr_type(pr, stream, 0, is_signed, insn.int3.sz, insn.int3.vec);
             pr_gpr(pr, stream, insn.int3.dest, ",\t");
             pr_gpr(pr, stream, insn.int3.src1, ",\t");
             pr_gpr(pr, stream, insn.int3.src2, "");
 
             break;
+        }
         default:
             pr(stream, "(bad)");
             break;
