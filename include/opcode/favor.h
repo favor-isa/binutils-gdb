@@ -140,8 +140,30 @@ struct favor_op_info {
     int32_t funct_x;
 };
 
+// struct favor_ty_info {
+//     const char *name;
+
+//     uint32_t u: 1;
+//     uint32_t f: 1;
+//     uint32_t sz: 2;
+//     uint32_t vec: 2;
+// };
+
+struct favor_reg_info {
+    const char *name;
+    uint32_t reg: 6;
+    uint32_t reg_mask: 5;
+    uint32_t f: 1;
+};
+
 extern struct favor_op_info favor_op_table[];
 extern size_t favor_op_table_size;
+
+extern struct favor_reg_info favor_reg_table[];
+extern size_t favor_reg_table_size;
+
+// extern struct favor_ty_info favor_ty_table[];
+// extern size_t favor_ty_table_size;
 
 /* Instruction kind: 0 arg, 1 arg, 2 arg, 3 arg */
 enum opcode {
@@ -163,6 +185,7 @@ enum opcode {
  */
 enum opcode_flag {
     OP_CC_MISC_SINGLETON = 0x100 | OP_CC_MISC,
+    OP_INT_FLOAT_3 = 0x200,
 };
 
 enum cc_misc {
@@ -410,6 +433,36 @@ mk_basic_cc_misc(uint32_t conditional, uint32_t funct) {
     result.opcode = OP_CC_MISC;
     result.cc_misc.conditional = conditional;
     result.cc_misc.funct = funct;
+    return result;
+}
+
+static inline
+struct insn
+mk_int3(uint32_t conditional, uint32_t dest, uint32_t src1, uint32_t src2, uint32_t sz, uint32_t vec, uint32_t funct) {
+    struct insn result = {0};
+    result.opcode = OP_INT3;
+    result.int3.conditional = conditional;
+    result.int3.dest = dest;
+    result.int3.src1 = src1;
+    result.int3.src2 = src2;
+    result.int3.sz = sz;
+    result.int3.vec = vec;
+    result.int3.funct = funct;
+    return result;
+}
+
+static inline
+struct insn
+mk_float3(uint32_t conditional, uint32_t dest, uint32_t src1, uint32_t src2, uint32_t sz, uint32_t vec, uint32_t funct) {
+    struct insn result = {0};
+    result.opcode = OP_FLOAT3;
+    result.float3.conditional = conditional;
+    result.float3.dest = dest;
+    result.float3.src1 = src1;
+    result.float3.src2 = src2;
+    result.float3.sz = sz;
+    result.float3.vec = vec;
+    result.float3.funct = funct;
     return result;
 }
 

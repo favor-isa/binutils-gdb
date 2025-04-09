@@ -13,6 +13,7 @@ const char FLT_CHARS[]            = "fFdD";
 // We will probably want to add fixed-point types through this..?
 
 static htab_t opcode_hash;
+static htab_t reg_hash;
 
 void
 md_operand(expressionS *exp ATTRIBUTE_UNUSED) {}
@@ -28,6 +29,12 @@ md_begin(void) {
     for(i = 0; i < favor_op_table_size; ++i) {
         struct favor_op_info *op = &favor_op_table[i];
         str_hash_insert(opcode_hash, op->name, op, 0);
+    }
+
+    reg_hash = str_htab_create();
+    for(i = 0; i < favor_reg_table_size; ++i) {
+        struct favor_reg_info *reg = &favor_reg_table[i];
+        str_hash_insert(reg_hash, reg->name, reg, 0);
     }
 
     bfd_set_arch_mach(stdoutput, TARGET_ARCH, 0);
@@ -50,7 +57,13 @@ skip_whitespace(char *str) {
 
 static char*
 skip_opcode(char *str) {
-    while(!is_whitespace(*str) && (*str != '.') && (*str != '?') && !is_end_of_line(*str)) ++str;
+    while(!is_whitespace(*str) && (*str != '.') && (*str != '?') && (*str != ',') && !is_end_of_line(*str)) ++str;
+    return str;
+}
+
+static char*
+skip_number(char *str) {
+    while((*str >= '0') && (*str <= '9') && !is_end_of_line(*str)) ++str;
     return str;
 }
 
@@ -70,6 +83,118 @@ skip_opcode(char *str) {
 
 // #define MATCH(s) match(op_beg, op_end, s)
 
+struct ty {
+    uint32_t u : 1;
+    uint32_t f : 1;
+    uint32_t sz: 2;
+    uint32_t vec: 2;
+};
+
+static char*
+parse_ty(char *str, struct ty *out) {
+    char *num_start, *num_end;
+    if(*str != '.') { as_bad("Expected type specifier."); return str; }
+    str++;
+
+    switch(*str) { \
+        case 'u': out->u = 1; out->f = 0; break;
+        case 's': out->u = 0; out->f = 0; break;
+        case 'f': out->u = 0; out->f = 1; break;
+        default: as_bad("Unknown type specifier %c.", *str); return str;
+    }
+
+    str++;
+
+    num_start = str;
+    num_end = (str = skip_number(str));
+
+    if(num_start == num_end) {
+        as_bad("Expected type size.");
+        return str;
+    }
+
+    if((size_t)(num_end - num_start) > 2) {
+        as_bad("Unknown type size.");
+        return str;
+    }
+
+    if(num_start[0] == '8' && num_start[1] == '\0') {
+        out->sz = 0;
+    }
+    else if(num_start[0] == '1' && num_start[1] == '6') {
+        out->sz = 1;
+    }
+    else if(num_start[0] == '3' && num_start[1] == '2') {
+        out->sz = 2;
+    }
+    else if(num_start[0] == '6' && num_start[1] == '4') {
+        out->sz = 3;
+    }
+    else {
+        as_bad("Unknown type size.");
+        return str;
+    }
+
+    if(*str == 'x') {
+        //char *vec_start, *vec_end;
+        //str++;
+        // TODO VEC
+    }
+    else {
+        out->vec = 0;
+    }
+
+    return str;
+}
+
+static char*
+parse_reg(char *str, struct favor_reg_info *out, bool comma_first, bool *success) {
+    char *reg_beg, *reg_end;
+    char was;
+    struct favor_reg_info *info;
+
+    *success = false;
+
+    str = skip_whitespace(str);
+    if(comma_first) {
+        if(*str != ',') { as_bad("Expected comma"); return str; }
+        str++;
+        str = skip_whitespace(str);
+    }
+
+    reg_beg = str;
+    reg_end = (str = skip_opcode(str));
+
+    was = *reg_end;
+    *reg_end = '\0';
+    info = str_hash_find(reg_hash, reg_beg);
+    if(!info) {
+        as_bad("Unknown register %s", reg_beg);
+        *reg_end = was;
+        return str;
+    }
+    *reg_end = was;
+
+    memcpy(out, info, sizeof(*out));
+    *success = true;
+    return str;
+}
+
+static bool
+parse_reg_into(char **str, uint32_t *out, bool comma_first, uint32_t f) {
+    struct favor_reg_info reg_info;
+    bool success;
+
+    *str = parse_reg(*str, &reg_info, comma_first, &success);
+    if(!success) return false;
+
+    if( f && !reg_info.f) { as_bad("Expected floating-point register."); return false; }
+    if(!f &&  reg_info.f) { as_bad("Expected integer register."); return false; }
+
+    *out = reg_info.reg_mask;
+    return true;
+}
+
 void
 md_assemble(char *str) {
     uint32_t conditional = 0;
@@ -77,6 +202,9 @@ md_assemble(char *str) {
     struct insn insn;
     struct favor_op_info *op_info;
     char was;
+    uint32_t src1, src2, dst;
+    struct ty ty;
+    
     /* For now, if we find 'a' on the string, output 4 bytes.. */
 
     op_beg = (str = skip_whitespace(str));
@@ -85,6 +213,12 @@ md_assemble(char *str) {
 #define PARSE_CONDITIONAL() do { \
     if(*str == '?') { conditional = 1; str++; } \
 } while(0)
+
+#define PARSE_TY() do { \
+    str = parse_ty(str, &ty); \
+} while(0)
+
+#define TY_FUNCT() (ty.f ? op_info->funct_f : (ty.u ? op_info->funct_u : op_info->funct_s))
 
     was = *op_end;
     *op_end = '\0';
@@ -96,6 +230,29 @@ md_assemble(char *str) {
             case OP_CC_MISC_SINGLETON: {
                 PARSE_CONDITIONAL();
                 insn = mk_basic_cc_misc(conditional, op_info->funct_cc);
+                break;
+            }
+            case OP_CC_MISC: {
+                // TODO
+                break;
+            }
+            case OP_INT_FLOAT_3: {
+                PARSE_TY();
+                PARSE_CONDITIONAL();
+                if(ty.f) {
+                    if(op_info->funct_f < 0) { as_bad("No such floating-point operation."); return; }
+                }
+                else if(ty.u) {
+                    if(op_info->funct_u < 0) { as_bad("No such unsigned integer operation."); return; }
+                }
+                else {
+                    if(op_info->funct_s < 0) { as_bad("No such signed integer operation."); return; }
+                }
+                if(!parse_reg_into(&str, &dst , false, ty.f)) return;
+                if(!parse_reg_into(&str, &src1, true , ty.f)) return;
+                if(!parse_reg_into(&str, &src2, true , ty.f)) return;
+                insn = (ty.f ? mk_float3 : mk_int3)(conditional, dst, src1, src2, ty.sz, ty.vec, TY_FUNCT());
+                break;
             }
         }
         output(favor_encode(insn));

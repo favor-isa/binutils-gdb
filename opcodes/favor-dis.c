@@ -13,7 +13,10 @@
 static void
 pr_cond(fprintf_ftype pr, void *stream, uint32_t conditional) {
     if(conditional) {
-        pr(stream, "?");
+        pr(stream, "?\t");
+    }
+    else {
+        pr(stream, " \t");
     }
 }
 
@@ -37,7 +40,6 @@ pr_type(fprintf_ftype pr, void *stream, uint32_t fp, uint32_t is_signed, uint32_
         case 2: pr(stream, "x3"); break;
         case 3: pr(stream, "x4"); break;
     }
-    pr(stream, "\t");
 }
 
 static void
@@ -139,8 +141,8 @@ print_insn_favor(bfd_vma addr, struct disassemble_info *info) {
             }
             pr_type(pr, stream, 0, is_signed, insn.int3.sz, insn.int3.vec);
             pr_cond(pr, stream, insn.int3.conditional);
-            pr_gpr(pr, stream, insn.int3.dest, ",\t");
-            pr_gpr(pr, stream, insn.int3.src1, ",\t");
+            pr_gpr(pr, stream, insn.int3.dest, ", ");
+            pr_gpr(pr, stream, insn.int3.src1, ", ");
             pr_gpr(pr, stream, insn.int3.src2, "");
 
             break;
