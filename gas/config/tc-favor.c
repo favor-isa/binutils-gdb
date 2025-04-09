@@ -41,8 +41,8 @@ md_begin(void) {
 }
 
 static void
-output(uint32_t code) {
-    unsigned char *output = (void*)frag_more(4);
+output(void *where, uint32_t code) {
+    unsigned char *output = where;
     output[0] = (code >> 0) & 0xFF;
     output[1] = (code >> 8) & 0xFF;
     output[2] = (code >> 16) & 0xFF;
@@ -205,6 +205,9 @@ md_assemble(char *str) {
     uint32_t src1, src2, dst;
     struct ty ty;
     expressionS exp;
+    char *where = NULL;
+
+    printf("line = [%s]\n", str);
     
     /* For now, if we find 'a' on the string, output 4 bytes.. */
 
@@ -227,6 +230,8 @@ md_assemble(char *str) {
     *op_end = was;
 
     if(op_info) {
+        where = frag_more (4);
+
         switch(op_info->opcode) {
             case OP_CC_MISC_SINGLETON: {
                 PARSE_CONDITIONAL();
@@ -261,12 +266,21 @@ md_assemble(char *str) {
                 insn.jump.and_link = 0;
                 insn.jump.funct = op_info->funct_j;
                 insn.jump.immediate = 0; // fixup
+
+                input_line_pointer = str;
                 expression(&exp);
+
+                fix_new_exp (frag_now,
+                    (where - frag_now->fr_literal),
+                    4,
+                    &exp,
+                    true,
+                    BFD_RELOC_32_PCREL);
 
                 break;
             }
         }
-        output(favor_encode(insn));
+        output(where, favor_encode(insn));
     }
     else if(op_end != op_beg) {
         // Otherwise, invalid instruction.
@@ -299,7 +313,24 @@ md_show_usage(FILE *stream ATTRIBUTE_UNUSED) { }
 
 void
 md_apply_fix(fixS *fixP ATTRIBUTE_UNUSED, valueT *valP ATTRIBUTE_UNUSED, segT seg ATTRIBUTE_UNUSED) {
+    char *buf = fixP->fx_where + fixP->fx_frag->fr_literal;
+    long val = *valP;
 
+    switch (fixP->fx_r_type)
+    {
+    // TODO: We probably don't want to use any of the base BFD types, and instead add our own
+    // to bfd/bfd.h.
+    case BFD_RELOC_32_PCREL:
+        // TODO: CUstom relocation
+        buf[3] = val >> 24;
+        buf[2] = val >> 16;
+        //buf[1] = val >> 8;
+        //buf[0] = val >> 0;
+        buf += 4;
+        break;
+    default:
+        abort();
+    }
 }
 
 void
@@ -310,6 +341,7 @@ md_number_to_chars(char *ptr, valueT use, int nbytes) {
 
 arelent*
 tc_gen_reloc(asection *section ATTRIBUTE_UNUSED, fixS *fixp) {
+    printf("gen reloc? %s \n", S_GET_NAME(fixp->fx_addsy));
     arelent *rel;
     bfd_reloc_code_real_type r_type;
 
@@ -319,7 +351,7 @@ tc_gen_reloc(asection *section ATTRIBUTE_UNUSED, fixS *fixp) {
     rel->address = fixp->fx_frag->fr_address + fixp->fx_where;
 
     r_type = fixp->fx_r_type;
-    rel->addend = fixp->fx_addnumber;
+    rel->addend = fixp->fx_offset;
     rel->howto = bfd_reloc_type_lookup(stdoutput, r_type);
 
     if(rel->howto == NULL) {
@@ -327,7 +359,7 @@ tc_gen_reloc(asection *section ATTRIBUTE_UNUSED, fixS *fixp) {
             _("Cannot represent relocation type %s"),
             bfd_get_reloc_code_name(r_type));
 
-        rel->howto = bfd_reloc_type_lookup(stdoutput, BFD_RELOC_32);
+        rel->howto = bfd_reloc_type_lookup(stdoutput, BFD_RELOC_32_PCREL);
     }
 
     return rel;
