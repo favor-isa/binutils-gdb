@@ -199,11 +199,12 @@ void
 md_assemble(char *str) {
     uint32_t conditional = 0;
     char *op_beg, *op_end;
-    struct insn insn;
+    struct insn insn = {0};
     struct favor_op_info *op_info;
     char was;
     uint32_t src1, src2, dst;
     struct ty ty;
+    expressionS exp;
     
     /* For now, if we find 'a' on the string, output 4 bytes.. */
 
@@ -252,6 +253,16 @@ md_assemble(char *str) {
                 if(!parse_reg_into(&str, &src1, true , ty.f)) return;
                 if(!parse_reg_into(&str, &src2, true , ty.f)) return;
                 insn = (ty.f ? mk_float3 : mk_int3)(conditional, dst, src1, src2, ty.sz, ty.vec, TY_FUNCT());
+                break;
+            }
+            case OP_JUMP: {
+                PARSE_CONDITIONAL();
+                insn.opcode = OP_JUMP;
+                insn.jump.and_link = 0;
+                insn.jump.funct = op_info->funct_j;
+                insn.jump.immediate = 0; // fixup
+                expression(&exp);
+
                 break;
             }
         }

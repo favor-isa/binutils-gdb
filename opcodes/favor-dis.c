@@ -147,6 +147,15 @@ print_insn_favor(bfd_vma addr, struct disassemble_info *info) {
 
             break;
         }
+        case OP_JUMP: {
+            switch(insn.jump.funct) {
+                case J_JUMP: pr(stream, "j     "); break;
+            }
+            pr_cond(pr, stream, 0); // TODO conditional
+            // TODO: Figure out sign extension? Also...
+            pr(stream, "\t0x%lx", addr + insn.jump.immediate);
+            break;
+        }
         default:
             pr(stream, "(bad)");
             break;

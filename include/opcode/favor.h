@@ -134,7 +134,7 @@ struct favor_op_info {
 
     uint32_t opcode;
     
-    union { int32_t funct_u; uint32_t funct_cc; };
+    union { int32_t funct_u; uint32_t funct_cc; uint32_t funct_j; };
     int32_t funct_s;
     int32_t funct_f;
     int32_t funct_x;
