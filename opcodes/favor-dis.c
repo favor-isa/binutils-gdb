@@ -10,14 +10,14 @@
 #include "opcode/favor.h"
 #include "dis-asm.h"
 
-void
+static void
 pr_cond(fprintf_ftype pr, void *stream, uint32_t conditional) {
     if(conditional) {
-        pr(stream, "+");
+        pr(stream, "?");
     }
 }
 
-void
+static void
 pr_type(fprintf_ftype pr, void *stream, uint32_t fp, uint32_t is_signed, uint32_t sz, uint32_t vec) {
     pr(stream, ".");
 
@@ -40,7 +40,7 @@ pr_type(fprintf_ftype pr, void *stream, uint32_t fp, uint32_t is_signed, uint32_
     pr(stream, "\t");
 }
 
-void
+static void
 pr_gpr(fprintf_ftype pr, void *stream, uint32_t reg, const char *after) {
     switch(reg) {
         case 0: pr(stream, "a0%s", after); break;
@@ -104,15 +104,16 @@ print_insn_favor(bfd_vma addr, struct disassemble_info *info) {
         case OP_CC_MISC:
             switch(insn.cc_misc.funct) {
                 case CCM_ILL: pr(stream, "ill"); break;
+                case CCM_NOP: pr(stream, "nop"); break;
                 case CCM_HALT: pr(stream, "halt"); break;
                 case CCM_SYSCALL: pr(stream, "syscall"); break;
                 default:
                     pr(stream, "(bad)");
                     break;
             };
+            pr_cond(pr, stream, insn.cc_misc.conditional);
             break;
         case OP_INT3: {
-            pr_cond(pr, stream, insn.int3.conditional);
             uint32_t is_signed = 0;
             switch(insn.int3.funct) {
                 case I3_ADD: pr(stream, "add"); break;
@@ -137,6 +138,7 @@ print_insn_favor(bfd_vma addr, struct disassemble_info *info) {
                 case I3_SAT_SUBU: pr(stream, "satsub"); is_signed = 0; break;
             }
             pr_type(pr, stream, 0, is_signed, insn.int3.sz, insn.int3.vec);
+            pr_cond(pr, stream, insn.int3.conditional);
             pr_gpr(pr, stream, insn.int3.dest, ",\t");
             pr_gpr(pr, stream, insn.int3.src1, ",\t");
             pr_gpr(pr, stream, insn.int3.src2, "");

@@ -12,6 +12,8 @@ const char EXP_CHARS[]            = "eE";
 const char FLT_CHARS[]            = "fFdD";
 // We will probably want to add fixed-point types through this..?
 
+static htab_t opcode_hash;
+
 void
 md_operand(expressionS *exp ATTRIBUTE_UNUSED) {}
 
@@ -20,6 +22,14 @@ md_operand(expressionS *exp ATTRIBUTE_UNUSED) {}
  */
 void
 md_begin(void) {
+    size_t i;
+    opcode_hash = str_htab_create();
+
+    for(i = 0; i < favor_op_table_size; ++i) {
+        struct favor_op_info *op = &favor_op_table[i];
+        str_hash_insert(opcode_hash, op->name, op, 0);
+    }
+
     bfd_set_arch_mach(stdoutput, TARGET_ARCH, 0);
 }
 
@@ -40,50 +50,60 @@ skip_whitespace(char *str) {
 
 static char*
 skip_opcode(char *str) {
-    while(!is_whitespace(*str) && (*str != '.') && !is_end_of_line(*str)) ++str;
+    while(!is_whitespace(*str) && (*str != '.') && (*str != '?') && !is_end_of_line(*str)) ++str;
     return str;
 }
 
-static bool
-match(char *s, char *e, const char *str) {
-    while(s != e) {
-        if(*s != *str) { return false; }
-        // *s == *str
-        if(*str == '\0') { return true; }
-        s++;
-        str++;
-    }
+// static bool
+// match(char *s, char *e, const char *str) {
+//     while(s != e) {
+//         if(*s != *str) { return false; }
+//         // *s == *str
+//         if(*str == '\0') { return true; }
+//         s++;
+//         str++;
+//     }
 
-    // now *str should be 0
-    return *str == '\0';
-}
+//     // now *str should be 0
+//     return *str == '\0';
+// }
 
-#define MATCH(s) match(op_beg, op_end, s)
+// #define MATCH(s) match(op_beg, op_end, s)
 
 void
 md_assemble(char *str) {
+    uint32_t conditional = 0;
+    char *op_beg, *op_end;
+    struct insn insn;
+    struct favor_op_info *op_info;
+    char was;
     /* For now, if we find 'a' on the string, output 4 bytes.. */
 
-    char *op_beg = skip_whitespace(str);
-    char *op_end = skip_opcode(str);
+    op_beg = (str = skip_whitespace(str));
+    op_end = (str = skip_opcode(str));
 
-    /* TODO: Use hash table to get opcode, as that's a thing we can do. */
-    if(MATCH("halt")) {
-        output(favor_encode(mk_basic_cc_misc(0, CCM_HALT)));
-    }
-    else if(MATCH("syscall")) {
-        output(favor_encode(mk_basic_cc_misc(0, CCM_SYSCALL)));
-    }
-    else if(MATCH("jmp")) {
-        output(1);
-    }
-    else if(MATCH("sub")) {
-        output(2);
-    }
+#define PARSE_CONDITIONAL() do { \
+    if(*str == '?') { conditional = 1; str++; } \
+} while(0)
 
-    // Otherwise, invalid instruction.
+    was = *op_end;
+    *op_end = '\0';
+    op_info = str_hash_find(opcode_hash, op_beg);
+    *op_end = was;
+
+    if(op_info) {
+        switch(op_info->opcode) {
+            case OP_CC_MISC_SINGLETON: {
+                PARSE_CONDITIONAL();
+                insn = mk_basic_cc_misc(conditional, op_info->funct_cc);
+            }
+        }
+        output(favor_encode(insn));
+    }
     else if(op_end != op_beg) {
-        as_bad("Invalid opcode.");
+        // Otherwise, invalid instruction.
+        *op_end = '\0';
+        as_bad("Invalid opcode '%s'.", op_beg);
     }
 }
 
