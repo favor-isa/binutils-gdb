@@ -128,6 +128,21 @@
  */
 
 
+
+struct favor_op_info {
+    const char *name;
+
+    uint32_t opcode;
+    
+    union { int32_t funct_u; uint32_t funct_cc; };
+    int32_t funct_s;
+    int32_t funct_f;
+    int32_t funct_x;
+};
+
+extern struct favor_op_info favor_op_table[];
+extern size_t favor_op_table_size;
+
 /* Instruction kind: 0 arg, 1 arg, 2 arg, 3 arg */
 enum opcode {
     OP_CC_MISC,
@@ -140,6 +155,14 @@ enum opcode {
     OP_LOAD,
     OP_STORE,
     OP_LS_SPECIAL,
+};
+
+/**
+ * Not real opcodes, but or'd in with the opcode field in favor_op_info to
+ * help narrow down certain things.
+ */
+enum opcode_flag {
+    OP_CC_MISC_SINGLETON = 0x100 | OP_CC_MISC,
 };
 
 enum cc_misc {
