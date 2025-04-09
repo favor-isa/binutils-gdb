@@ -51,6 +51,80 @@ fetch_code(sim_cpu *scpu, struct favor_sim_cpu *cpu) {
     return code;
 }
 
+static bool
+opcode_mask(struct favor_sim_cpu *cpu, uint32_t conditional, uint32_t element, uint32_t vec) {
+  if(element > vec) return false; // Never execute for elements outsidie of the vector.
+  if(!conditional) return true; // Unconditional always execute.
+  // Otherwise, predicate based on the individual C flags.
+  return cpu->c_codes[element];
+}
+
+#define APPLY_VEC3(opcode, fn, ...) do { \
+  if(opcode_mask(cpu, opcode.conditional, 0, opcode.vec)) \
+    cpu->gpr[opcode.dest] = fn(cpu->gpr[opcode.src1], cpu->gpr[opcode.src2], ##__VA_ARGS__); \
+  if(opcode_mask(cpu, opcode.conditional, 1, opcode.vec)) \
+    cpu->gpr[opcode.dest | 1] = fn(cpu->gpr[opcode.src1 | 1], cpu->gpr[opcode.src2 | 1], ##__VA_ARGS__); \
+  if(opcode_mask(cpu, opcode.conditional, 2, opcode.vec)) \
+    cpu->gpr[opcode.dest | 2] = fn(cpu->gpr[opcode.src1 | 2], cpu->gpr[opcode.src2 | 2], ##__VA_ARGS__); \
+  if(opcode_mask(cpu, opcode.conditional, 3, opcode.vec)) \
+    cpu->gpr[opcode.dest | 3] = fn(cpu->gpr[opcode.src1 | 3], cpu->gpr[opcode.src2 | 3], ##__VA_ARGS__); \
+} while(0)
+
+#define MASKED_ARITH(src1, src2, sz, op) mask_sz(src1 op src2, sz)
+
+static uint64_t
+mask_sz(uint64_t value, uint32_t sz) {
+  switch(sz) {
+    case 0: return value &       0xFFULL;
+    case 1: return value &     0xFFFFULL;
+    case 2: return value & 0xFFFFFFFFULL;
+    case 3:
+    default:
+      return value;
+  }
+}
+
+static uint64_t
+mask_szs(int64_t value, uint32_t sz) {
+  return mask_sz((uint64_t)value, sz);
+}
+
+static int64_t
+sextend(uint64_t in, uint32_t sz) {
+  switch(sz) {
+    case 0: if(in &      0x80ull) { return in |= 0xFFFFFFFFFFFFFF00ull; }; break;
+    case 1: if(in &    0x8000ull) { return in |= 0xFFFFFFFFFFFF0000ull; }; break;
+    case 2: if(in & 0x8000000ull) { return in |= 0xFFFFFFFF00000000ull; }; break;
+  }
+  return (int64_t)in;
+}
+
+static uint64_t
+rshs(uint64_t a, uint64_t b, uint32_t sz) {
+  int64_t as = (int64_t)a;
+  int64_t bs = (int64_t)b;
+  // This is wrong as we need to do the sign extension differently.
+  // TODO: Is that a problem for other ops? Do we want to have our registers
+  // always sign extended? Doesn't that mess up multiplication?
+  return mask_sz((uint64_t)(as >> bs), sz); 
+}
+
+static uint64_t
+minu(uint64_t a, uint64_t b, uint32_t sz) { return mask_sz(a < b ? a : b, sz); }
+static uint64_t
+maxu(uint64_t a, uint64_t b, uint32_t sz) { return mask_sz(a < b ? b : a, sz); }
+
+static uint64_t
+mins(uint64_t au, uint64_t bu, uint32_t sz) {
+  int64_t a = sextend(au, sz), b = sextend(bu, sz);
+  return mask_szs(a < b ? a : b, sz);
+}
+static uint64_t
+maxs(uint64_t au, uint64_t bu, uint32_t sz) {
+  int64_t a = sextend(au, sz), b = sextend(bu, sz);
+  return mask_szs(a < b ? b : a, sz);
+}
+
 void
 sim_engine_run (SIM_DESC sd,
 		int next_cpu_nr, /* ignore  */
@@ -83,10 +157,10 @@ sim_engine_run (SIM_DESC sd,
                         /* TODO: Truncate the values in a well-defined way. */
                         cpu->gpr[REG_V0] = sim_syscall(scpu,
                             (int)cpu->gpr[REG_V0],
+                            (long)cpu->gpr[REG_A0],
                             (long)cpu->gpr[REG_A1],
                             (long)cpu->gpr[REG_A2],
-                            (long)cpu->gpr[REG_A3],
-                            (long)cpu->gpr[REG_A4]);
+                            (long)cpu->gpr[REG_A3]);
                         break;
                     default:
                         /* Illegal instruction. SIGILL */
@@ -96,6 +170,22 @@ sim_engine_run (SIM_DESC sd,
                   }
                 }
                 break;
+            case OP_INT3:
+                switch(insn.int3.funct) {
+                  case I3_ADD: APPLY_VEC3(insn.int3, MASKED_ARITH, insn.int3.sz, +); break;
+                  case I3_SUB: APPLY_VEC3(insn.int3, MASKED_ARITH, insn.int3.sz, -); break;
+                  case I3_LSH: APPLY_VEC3(insn.int3, MASKED_ARITH, insn.int3.sz, <<); break;
+                  case I3_RSHU: APPLY_VEC3(insn.int3, MASKED_ARITH, insn.int3.sz, >>); break;
+                  case I3_RSHS: APPLY_VEC3(insn.int3, rshs, insn.int3.sz); break;
+                  // TODO: rol, ror
+                  case I3_AND: APPLY_VEC3(insn.int3, MASKED_ARITH, insn.int3.sz, &); break;
+                  case I3_OR: APPLY_VEC3(insn.int3, MASKED_ARITH, insn.int3.sz, |); break;
+                  case I3_XOR: APPLY_VEC3(insn.int3, MASKED_ARITH, insn.int3.sz, ^); break;
+                  case I3_MINU: APPLY_VEC3(insn.int3, minu, insn.int3.sz); break;
+                  case I3_MINS: APPLY_VEC3(insn.int3, mins, insn.int3.sz); break;
+                  case I3_MAXU: APPLY_VEC3(insn.int3, maxu, insn.int3.sz); break;
+                  case I3_MAXS: APPLY_VEC3(insn.int3, maxs, insn.int3.sz); break;
+                }
             default:
                 break;
         }
@@ -248,7 +338,11 @@ sim_create_inferior (SIM_DESC sd, struct bfd *prog_bfd,
   cpu->gpr[REG_V0] = CB_SYS_write;
   cpu->gpr[REG_A0] = 1; /* STDOUT_FILENO */
   cpu->gpr[REG_A1] = 0x5000; /* buffer */
-  cpu->gpr[REG_A2] = 12;     /* length */
+  //cpu->gpr[REG_A2] = 12;     /* length */
+
+  cpu->gpr[REG_A5] = 3; // for demo, we can tyr creating a2 by doing (a5 << a6) + a7
+  cpu->gpr[REG_A6] = 1;
+  cpu->gpr[REG_A7] = 6;
     
   //  cpu.asregs.regs[PC_REGNO] = bfd_get_start_address (prog_bfd);
 

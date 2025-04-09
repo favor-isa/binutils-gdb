@@ -4,6 +4,8 @@
 struct favor_sim_cpu {
     uint64_t gpr[32];
 
+    bool c_codes[4];
+
     /* The program counter. */
     sim_cia  pc;
 };
