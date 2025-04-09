@@ -63,50 +63,37 @@ sim_engine_run (SIM_DESC sd,
   /* Run instructions here. */
     for(;;) {
         uint32_t op = fetch_code(scpu, cpu);
-        struct favor_insn insn = favor_decode(op);
+        struct insn insn = favor_decode(op);
         void *pc_addr = (void*)cpu->pc;
 
         TRACE_EXTRACT(scpu, "%p: %#08x", pc_addr, op);
 
-        switch(insn.kind) {
-            case FAVOR_K0:
-                TRACE_DECODE(scpu, "%p: %c k0 %#x %#08x", pc_addr, (insn.c ? 'c' : 'u'), insn.k0_code, insn.k0_imm);
+        switch(insn.opcode) {
+            case OP_CC_MISC:
+                //TRACE_DECODE(scpu, "%p: %c cc_misc %#x %#08x", pc_addr, (insn.cc_misc.conditional ? 'c' : 'u'), insn.cc_misc., insn.cc_misc.);
 
-                switch(insn.k0_code) {
-                    case OP_K0_SINGLETON: {
-                        uint32_t imm = insn.k0_imm;
-                        /* Singleton opcodes. */
-                        TRACE_DECODE(scpu, "%p: %c singleton #%08x", pc_addr, (insn.c ? 'c' : 'u'), insn.k0_imm);
-                        
-                        switch(imm) {
-                          case OP_SNG_HALT:
-                            TRACE_INSN(scpu, "%p: halt", pc_addr);
-                            /* Done. sigrc param is exit code. Maybe put a0 there? */
-                            sim_engine_halt(sd, scpu, NULL, cpu->pc, sim_exited, 0);
-                            break;
-                          case OP_SNG_SYSCALL:
-                            TRACE_INSN(scpu, "%p: syscall", pc_addr);
-                            /* TODO: Truncate the values in a well-defined way. */
-                            sim_syscall(scpu,
-                                (int)cpu->gpr[FAVOR_REG_A0],
-                                (long)cpu->gpr[FAVOR_REG_A1],
-                                (long)cpu->gpr[FAVOR_REG_A2],
-                                (long)cpu->gpr[FAVOR_REG_A3],
-                                (long)cpu->gpr[FAVOR_REG_A4]);
-                            break;
-                          default:
-                            /* Illegal instruction. SIGILL */
-                            TRACE_INSN(scpu, "%p: badsng %#x", pc_addr, insn.k0_imm);
-                            sim_engine_halt(sd, scpu, NULL, cpu->pc, sim_stopped, SIGILL);
-                            break;
-                        }
+                switch(insn.cc_misc.funct) {
+                    case CCM_HALT: {
+                        TRACE_INSN(scpu, "%p: halt", pc_addr);
+                        /* Done. sigrc param is exit code. Maybe put a0 there? */
+                        sim_engine_halt(sd, scpu, NULL, cpu->pc, sim_exited, 0);
                         break;
-                      }
+                    case CCM_SYSCALL:
+                        TRACE_INSN(scpu, "%p: syscall", pc_addr);
+                        /* TODO: Truncate the values in a well-defined way. */
+                        cpu->gpr[REG_V0] = sim_syscall(scpu,
+                            (int)cpu->gpr[REG_V0],
+                            (long)cpu->gpr[REG_A1],
+                            (long)cpu->gpr[REG_A2],
+                            (long)cpu->gpr[REG_A3],
+                            (long)cpu->gpr[REG_A4]);
+                        break;
                     default:
                         /* Illegal instruction. SIGILL */
-                        TRACE_INSN(scpu, "%p: bad0.%d %#x", pc_addr, insn.k0_code, insn.k0_imm);
+                        TRACE_INSN(scpu, "%p: illegal %#x", pc_addr, op);
                         sim_engine_halt(sd, scpu, NULL, cpu->pc, sim_stopped, SIGILL);
                         break;
+                  }
                 }
                 break;
             default:
@@ -258,10 +245,10 @@ sim_create_inferior (SIM_DESC sd, struct bfd *prog_bfd,
   
   sim_core_write_buffer(sd, scpu, write_map, test_syscall, 0x5000, 13);
 
-  cpu->gpr[FAVOR_REG_A0] = CB_SYS_write;
-  cpu->gpr[FAVOR_REG_A1] = 1; /* STDOUT_FILENO */
-  cpu->gpr[FAVOR_REG_A2] = 0x5000; /* buffer */
-  cpu->gpr[FAVOR_REG_A3] = 12;     /* length */
+  cpu->gpr[REG_V0] = CB_SYS_write;
+  cpu->gpr[REG_A0] = 1; /* STDOUT_FILENO */
+  cpu->gpr[REG_A1] = 0x5000; /* buffer */
+  cpu->gpr[REG_A2] = 12;     /* length */
     
   //  cpu.asregs.regs[PC_REGNO] = bfd_get_start_address (prog_bfd);
 

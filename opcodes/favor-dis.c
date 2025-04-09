@@ -10,6 +10,74 @@
 #include "opcode/favor.h"
 #include "dis-asm.h"
 
+void
+pr_cond(fprintf_ftype pr, void *stream, uint32_t conditional) {
+    if(conditional) {
+        pr(stream, "+");
+    }
+}
+
+void
+pr_type(fprintf_ftype pr, void *stream, uint32_t fp, uint32_t sign, uint32_t sz, uint32_t vec) {
+    pr(stream, ".");
+
+    if(fp) pr(stream, "f");
+    else if(sign) { pr(stream, "s"); }
+    else { pr(stream, "u"); }
+
+    switch(sz) {
+        case 0: pr(stream, "8"); break;
+        case 1: pr(stream, "16"); break;
+        case 2: pr(stream, "32"); break;
+        case 3: pr(stream, "64"); break;
+    }
+    switch(vec) {
+        case 0: break;
+        case 1: pr(stream, "x2"); break;
+        case 2: pr(stream, "x3"); break;
+        case 3: pr(stream, "x4"); break;
+    }
+    pr(stream, "\t");
+}
+
+void
+pr_gpr(fprintf_ftype pr, void *stream, uint32_t reg, const char *after) {
+    switch(reg) {
+        case 0: pr(stream, "a0%s", after); break;
+        case 1: pr(stream, "a1%s", after); break;
+        case 2: pr(stream, "a2%s", after); break;
+        case 3: pr(stream, "a3%s", after); break;
+        case 4: pr(stream, "a4%s", after); break;
+        case 5: pr(stream, "a5%s", after); break;
+        case 6: pr(stream, "a6%s", after); break;
+        case 7: pr(stream, "a7%s", after); break;
+        case 8: pr(stream, "v0%s", after); break;
+        case 9: pr(stream, "v1%s", after); break;
+        case 10: pr(stream, "v2%s", after); break;
+        case 11: pr(stream, "v3%s", after); break;
+        case 12: pr(stream, "v4%s", after); break;
+        case 13: pr(stream, "v5%s", after); break;
+        case 14: pr(stream, "v6%s", after); break;
+        case 15: pr(stream, "v7%s", after); break;
+        case 16: pr(stream, "t0%s", after); break;
+        case 17: pr(stream, "t1%s", after); break;
+        case 18: pr(stream, "t2%s", after); break;
+        case 19: pr(stream, "t3%s", after); break;
+        case 20: pr(stream, "t4%s", after); break;
+        case 21: pr(stream, "t5%s", after); break;
+        case 22: pr(stream, "t6%s", after); break;
+        case 23: pr(stream, "t7%s", after); break;
+        case 24: pr(stream, "t8%s", after); break;
+        case 25: pr(stream, "t9%s", after); break;
+        case 26: pr(stream, "t10%s", after); break;
+        case 27: pr(stream, "t11%s", after); break;
+        case 28: pr(stream, "sp%s", after); break;
+        case 29: pr(stream, "fp%s", after); break;
+        case 30: pr(stream, "la%s", after); break;
+        case 31: pr(stream, "zero%s", after); break;
+    }
+}
+
 int
 print_insn_favor(bfd_vma addr, struct disassemble_info *info) {
     fprintf_ftype pr = info->fprintf_func;
@@ -30,31 +98,32 @@ print_insn_favor(bfd_vma addr, struct disassemble_info *info) {
     op |= (the_bytes[3] << 24);
 
     // We read the opcode, disassemble it.
-    struct favor_insn insn = favor_decode(op);
+    struct insn insn = favor_decode(op);
 
-    switch(insn.kind) {
-        case FAVOR_K0:
-            switch(insn.k0_code) {
-                case FAVOR_HALT:
-                    pr(stream, "halt");
-                    break;
+    switch(insn.opcode) {
+        case OP_CC_MISC:
+            switch(insn.cc_misc.funct) {
+                case CCM_ILL: pr(stream, "ill"); break;
+                case CCM_HALT: pr(stream, "halt"); break;
+                case CCM_SYSCALL: pr(stream, "syscall"); break;
                 default:
-                    pr(stream, "bad0.%d\t0x%x", insn.k0_code, insn.k0_imm);
+                    pr(stream, "(bad)");
                     break;
             };
             break;
-        case FAVOR_K1:
-            switch(insn.k1_code) {
-                default:
-                    pr(stream, "bad1.%d\t0x%x", insn.k1_code, insn.k1_imm);
-                    break;
-            };
+        case OP_INT3:
+            pr_cond(pr, stream, insn.int3.conditional);
+            switch(insn.int3.funct) {
+                case I3_ADD: pr(stream, "add"); break;
+            }
+            pr_type(pr, stream, 0, 0, insn.int3.sz, insn.int3.vec);
+            pr_gpr(pr, stream, insn.int3.dest, ",\t");
+            pr_gpr(pr, stream, insn.int3.src1, ",\t");
+            pr_gpr(pr, stream, insn.int3.src2, "");
+
             break;
-        case FAVOR_K2:
-            pr(stream, "bad2.unknown");
-            break;
-        case FAVOR_K3:
-            pr(stream, "bad3.unknown");
+        default:
+            pr(stream, "(bad)");
             break;
     }
 

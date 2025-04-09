@@ -69,10 +69,10 @@ md_assemble(char *str) {
 
     /* TODO: Use hash table to get opcode, as that's a thing we can do. */
     if(MATCH("halt")) {
-        output(favor_encode(favor_singleton(0, OP_SNG_HALT)));
+        output(favor_encode(mk_basic_cc_misc(0, CCM_HALT)));
     }
     else if(MATCH("syscall")) {
-        output(favor_encode(favor_singleton(0, OP_SNG_SYSCALL)));
+        output(favor_encode(mk_basic_cc_misc(0, CCM_SYSCALL)));
     }
     else if(MATCH("jmp")) {
         output(1);
