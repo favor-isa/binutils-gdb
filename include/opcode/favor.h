@@ -342,77 +342,124 @@ struct insn {
     };
 };
 
-static inline
-struct favor_insn
-favor_k0_insn(uint32_t c, uint32_t op, uint32_t imm) {
-    struct favor_insn insn;
-    insn.c = c;
-    insn.kind = FAVOR_K0;
-    insn.k0_code = op;
-    insn.k0_imm = imm;
-    return insn;
-}
 
-static inline
-struct favor_insn
-favor_singleton(uint32_t c, uint32_t op) {
-    return favor_k0_insn(c, OP_K0_SINGLETON, op);
-}
 
 static inline
 uint32_t
-favor_encode(struct favor_insn insn) {
+favor_encode(struct insn insn) {
     uint32_t value = 0;
-    value |= (insn.c    << 31);
-    value |= (insn.kind << 29);
+    value |= (insn.opcode);
 
-    // All other ones have a vec, sz, reg0
-    if(insn.kind != FAVOR_K0) {
-        insn.vec |= (insn.vec << 27);
-        insn.sz  |= (insn.sz  << 25);
-    }
-
-    switch(insn.kind) {
-        case FAVOR_K0:
-            value |= (insn.k0_code << 25);
-            value |= (insn.k0_imm  << 0);
+    switch(insn.opcode) {
+        case OP_CC_MISC:
+            value |= (insn.cc_misc.conditional << 4);
+            value |= (insn.cc_misc.dest        << 5);
+            value |= (insn.cc_misc.shift       << 10);
+            value |= (insn.cc_misc.is_return   << 16);
+            value |= (insn.cc_misc.vec         << 17);
+            value |= (insn.cc_misc.funct       << 19);
             break;
-        case FAVOR_K1:
-            value |= (insn.k1_code << 16);
-            value |= (insn.k1_imm  << 0);
+        case OP_JUMP:
+            value |= (insn.jump.funct     << 4);
+            value |= (insn.jump.and_link  << 9);
+            value |= (insn.jump.immediate << 10);
             break;
-        
+        case OP_INT3:
+            value |= (insn.int3.conditional << 4);
+            value |= (insn.int3.dest        << 5);
+            value |= (insn.int3.src1        << 10);
+            value |= (insn.int3.src2        << 15);
+            value |= (insn.int3.sz          << 20);
+            value |= (insn.int3.vec         << 22);
+            value |= (insn.int3.funct       << 24);
+            break;
+        case OP_INT2: {
+            uint32_t funct = insn.int2.funct;
+            value |= (insn.int2.conditional << 4);
+            value |= (insn.int2.dest        << 5);
+            value |= (insn.int2.src1        << 10);
+            value |= ((funct & 0x1F)        << 15);
+            funct >>= 5;
+            value |= (insn.int2.sz          << 20);
+            value |= (insn.int2.vec         << 22);
+            value |= (funct                 << 24);
+            break;
+        }
+        case OP_LOAD:
+        case OP_STORE: {
+            value |= (insn.ls.conditional << 4);
+            value |= (insn.ls.dest        << 5);
+            value |= (insn.ls.src1        << 10);
+            value |= (insn.ls.src2        << 15);
+            value |= (insn.ls.sz          << 20);
+            value |= (insn.ls.vec         << 22);
+            value |= (insn.ls.fp          << 24);
+            value |= (insn.ls.offset      << 25);
+            value |= (insn.ls.shift       << 30);
+            break;
+        }
     }
 
     return value;
 }
 
 static inline
-struct favor_insn
+struct insn
 favor_decode(uint32_t code) {
-    struct favor_insn insn;
+    struct insn insn;
 
     // Do bitfields automatically get masked out? Convenient if true.
-    insn.c    = (code >> 31);
-    insn.kind = (code >> 29);
+    insn.opcode = code;
 
-    if(insn.kind != FAVOR_K0) {
-        insn.vec = (code >> 27);
-        insn.sz  = (code >> 25);
-    }
-
-    switch(insn.kind) {
-        case FAVOR_K0:
-            insn.k0_code = (code >> 25);
-            insn.k0_imm  = (code >>  0);
+    switch(insn.opcode) {
+        case OP_CC_MISC:
+            insn.cc_misc.conditional = code >> 4;
+            insn.cc_misc.dest        = code >> 5;
+            insn.cc_misc.shift       = code >> 10;
+            insn.cc_misc.is_return   = code >> 16;
+            insn.cc_misc.vec         = code >> 17;
+            insn.cc_misc.funct       = code >> 19;
             break;
-        case FAVOR_K1:
-            insn.k1_code = (code >> 16);
-            insn.k1_imm  = (code >>  0);
+        case OP_JUMP:
+            insn.jump.funct     = code >> 4 ;
+            insn.jump.and_link  = code >> 9 ;
+            insn.jump.immediate = code >> 10;
             break;
+        case OP_INT3:
+            insn.int3.conditional = code >> 4 ;
+            insn.int3.dest        = code >> 5 ;
+            insn.int3.src1        = code >> 10;
+            insn.int3.src2        = code >> 15;
+            insn.int3.sz          = code >> 20;
+            insn.int3.vec         = code >> 22;
+            insn.int3.funct       = code >> 24;
+            break;
+        case OP_INT2: {
+            uint32_t funct = insn.int2.funct;
+            insn.int2.conditional = code >> 4;
+            insn.int2.dest        = code >> 5;
+            insn.int2.src1        = code >> 10;
+            funct                |= (code >> 15) & 0x1F;
+            funct <<= 5;
+            insn.int2.sz          = code >> 20;
+            insn.int2.vec         = code >> 22;
+            funct                |= code >> 24;
+            break;
+        }
+        case OP_LOAD:
+        case OP_STORE: {
+            insn.ls.conditional = code >> 4 ;
+            insn.ls.dest        = code >> 5 ;
+            insn.ls.src1        = code >> 10;
+            insn.ls.src2        = code >> 15;
+            insn.ls.sz          = code >> 20;
+            insn.ls.vec         = code >> 22;
+            insn.ls.fp          = code >> 24;
+            insn.ls.offset      = code >> 25;
+            insn.ls.shift       = code >> 30;
+            break;
+        }
     }
-
-    return insn;
 }
 
 #endif
