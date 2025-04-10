@@ -339,6 +339,11 @@ md_apply_fix(fixS *fixP ATTRIBUTE_UNUSED, valueT *valP ATTRIBUTE_UNUSED, segT se
         insn |= (val >> 2) << 10;
         printf("outgoing insn: %x\n", insn);
         output(buf, insn);
+        if(fixP->fx_addsy == NULL) {
+            // Done with fixes that have no symbol, as they're always
+            // PC-relative..?
+            fixP->fx_done = 1;
+        }
         //buf += 4;
         break;
     default:

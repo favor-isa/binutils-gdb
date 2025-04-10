@@ -31,10 +31,10 @@ favor_elf_howto_table[] = {
         complain_overflow_bitfield,
         bfd_elf_generic_reloc,
         "R_FAVOR_J22_PCREL",
-        true,
-        0xFFFFFB00,
-        0xFFFFFB00,
-        0)
+        false,
+        0x00000000,
+        0xFFFFFC00,
+        true)
 };
 
 #define FAVOR_RELOC_TABLE_SIZE (sizeof(favor_elf_howto_table) / sizeof(*favor_elf_howto_table))
@@ -81,7 +81,7 @@ favor_final_link_relocate (reloc_howto_type *howto,
 			   Elf_Internal_Rela *rel,
 			   bfd_vma relocation)
 {
-    printf("favor final link !!: %lx\n", relocation);
+    printf("favor final link !!: %lx %lx %lx\n", rel->r_offset, rel->r_addend, relocation);
     return _bfd_final_link_relocate(howto, input_bfd, input_section,
         contents, rel->r_offset, relocation, rel->r_addend);
 }
