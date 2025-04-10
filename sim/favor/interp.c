@@ -125,6 +125,17 @@ maxs(uint64_t au, uint64_t bu, uint32_t sz) {
   return mask_szs(a < b ? b : a, sz);
 }
 
+static int32_t
+sign_extend_32(uint32_t input, uint32_t bit) {
+    if(input & (1 << bit)) {
+        while(bit < (sizeof(input) * 8)) {
+            input |= ((uint32_t)1 << bit);
+            bit += 1;
+        }
+    }
+    return (int32_t)input;
+}
+
 void
 sim_engine_run (SIM_DESC sd,
 		int next_cpu_nr, /* ignore  */
@@ -139,6 +150,7 @@ sim_engine_run (SIM_DESC sd,
         uint32_t op = fetch_code(scpu, cpu);
         struct insn insn = favor_decode(op);
         void *pc_addr = (void*)cpu->pc;
+        bool do_increment_pc = true;
 
         TRACE_EXTRACT(scpu, "%p: %#08x", pc_addr, op);
 
@@ -162,6 +174,7 @@ sim_engine_run (SIM_DESC sd,
                             (long)cpu->gpr[REG_A2],
                             (long)cpu->gpr[REG_A3]);
                         break;
+                    case CCM_NOP: break; /* nop */
                     default:
                         /* Illegal instruction. SIGILL */
                         TRACE_INSN(scpu, "%p: illegal %#x", pc_addr, op);
@@ -186,12 +199,26 @@ sim_engine_run (SIM_DESC sd,
                   case I3_MAXU: APPLY_VEC3(insn.int3, maxu, insn.int3.sz); break;
                   case I3_MAXS: APPLY_VEC3(insn.int3, maxs, insn.int3.sz); break;
                 }
+                break;
+            case OP_JUMP: {
+              int32_t offset = sign_extend_32(insn.jump.immediate, 21) * 4;
+              TRACE_DECODE(scpu, "%p: OP_JUMP %d", pc_addr, offset);
+              if(insn.jump.funct == J_JUMP) {
+                CPU_PC_SET(scpu, cpu->pc + offset);
+                do_increment_pc = false;
+              }
+              break;
+            }
             default:
                 break;
         }
 
         // Increase pc.
-        CPU_PC_SET(scpu, cpu->pc + 4);
+        if(do_increment_pc) {
+          CPU_PC_SET(scpu, cpu->pc + 4);
+        }
+
+        cpu->gpr[REG_ZERO] = 0;
 
         // Necessary to e.g. kill the program.
         if (sim_events_tick (sd)) sim_events_process (sd);
