@@ -80,6 +80,17 @@ pr_gpr(fprintf_ftype pr, void *stream, uint32_t reg, const char *after) {
     }
 }
 
+static int32_t
+sign_extend_32(uint32_t input, uint32_t bit) {
+    if(input & (1 << bit)) {
+        while(bit < (sizeof(input) * 8)) {
+            input |= ((uint32_t)1 << bit);
+            bit += 1;
+        }
+    }
+    return (int32_t)input;
+}
+
 int
 print_insn_favor(bfd_vma addr, struct disassemble_info *info) {
     fprintf_ftype pr = info->fprintf_func;
@@ -153,7 +164,9 @@ print_insn_favor(bfd_vma addr, struct disassemble_info *info) {
             }
             pr_cond(pr, stream, 0); // TODO conditional
             // TODO: Figure out sign extension? Also...
-            pr(stream, "\t0x%lx", addr + insn.jump.immediate);
+            pr(stream, "\t0x%x", insn.jump.immediate);
+            pr(stream, "\t0x%x", (uint32_t)sign_extend_32(insn.jump.immediate, 21));
+            pr(stream, "\t0x%lx", addr + (sign_extend_32(insn.jump.immediate, 21) * 4));
             break;
         }
         default:

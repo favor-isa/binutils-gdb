@@ -22,18 +22,18 @@ favor_elf_howto_table[] = {
         0,
         false),
 
-    HOWTO(R_FAVOR_J23_PCREL,
+    HOWTO(R_FAVOR_J22_PCREL,
         2, // mask off last 2 bits?
-        2,
-        23,
+        4,
+        22,
         true,
-        9,
+        10,
         complain_overflow_bitfield,
         bfd_elf_generic_reloc,
-        "R_FAVOR_J23_PCREL",
+        "R_FAVOR_J22_PCREL",
         true,
-        0xFFFFFFFF,
-        0xFFFFFFFF,
+        0xFFFFFB00,
+        0xFFFFFB00,
         0)
 };
 
@@ -42,7 +42,7 @@ favor_elf_howto_table[] = {
 static reloc_howto_type*
 favor_elf_reloc_type_lookup(bfd *abfd ATTRIBUTE_UNUSED, bfd_reloc_code_real_type code) {
     if(code == BFD_RELOC_NONE)            return &favor_elf_howto_table[R_FAVOR_NONE];
-    if(code == BFD_RELOC_FAVOR_J23_PCREL) return &favor_elf_howto_table[R_FAVOR_J23_PCREL];
+    if(code == BFD_RELOC_FAVOR_J22_PCREL) return &favor_elf_howto_table[R_FAVOR_J22_PCREL];
     return NULL;
 }
 
@@ -72,6 +72,88 @@ favor_elf_info_to_howto(bfd *abfd ATTRIBUTE_UNUSED,
     return true;
 }
 
+
+static bfd_reloc_status_type
+favor_final_link_relocate (reloc_howto_type *howto,
+			   bfd *input_bfd,
+			   asection *input_section,
+			   bfd_byte *contents,
+			   Elf_Internal_Rela *rel,
+			   bfd_vma relocation)
+{
+    printf("favor final link !!: %lx\n", relocation);
+    return _bfd_final_link_relocate(howto, input_bfd, input_section,
+        contents, rel->r_offset, relocation, rel->r_addend);
+}
+
+static int
+favor_elf_relocate_section (bfd *output_bfd,
+			    struct bfd_link_info *info,
+			    bfd *input_bfd,
+			    asection *input_section,
+			    bfd_byte *contents,
+			    Elf_Internal_Rela *relocs,
+			    Elf_Internal_Sym *local_syms,
+			    asection **local_sections)
+{
+    Elf_Internal_Shdr *symtab_hdr;
+    struct elf_link_hash_entry **sym_hashes;
+    Elf_Internal_Rela *rel;
+    Elf_Internal_Rela *relend;
+
+    symtab_hdr = &elf_tdata(input_bfd)->symtab_hdr;
+    sym_hashes = elf_sym_hashes(input_bfd);
+    relend = relocs + input_section->reloc_count;
+
+    for(rel = relocs; rel < relend; ++rel) {
+        unsigned long r_symndx;
+        int r_type;
+        Elf_Internal_Sym *sym = NULL;
+        asection *sec = NULL;
+        bfd_vma relocation;
+        bfd_reloc_status_type r;
+        const char *name;
+        struct elf_link_hash_entry *h = NULL;
+        reloc_howto_type *howto;
+
+        r_type   = ELF32_R_TYPE(rel->r_info);
+        r_symndx = ELF32_R_SYM(rel->r_info);
+        howto    = favor_elf_howto_table + r_type;
+
+        if(r_symndx < symtab_hdr->sh_info) {
+            sym = local_syms + r_symndx;
+            sec = local_sections[r_symndx];
+            relocation = _bfd_elf_rela_local_sym(output_bfd, sym, &sec, rel);
+        
+            name = bfd_elf_string_from_elf_section(input_bfd, symtab_hdr->sh_link, sym->st_name);
+            name = name == NULL ? bfd_section_name(sec) : name;
+        }
+        else {
+            bool unresolved_reloc, warned, ignored;
+
+            RELOC_FOR_GLOBAL_SYMBOL (info, input_bfd, input_section, rel,
+                r_symndx, symtab_hdr, sym_hashes,
+                h, sec, relocation,
+                unresolved_reloc, warned, ignored);
+
+            name = h->root.root.string;
+        }
+
+        if(sec != NULL && discarded_section(sec))
+            RELOC_AGAINST_DISCARDED_SECTION(info, input_bfd, input_section, rel, 1, relend, howto, 0, contents);
+
+        if(bfd_link_relocatable(info)) continue;
+
+        r = favor_final_link_relocate(howto, input_bfd, input_section, contents, rel, relocation);
+        if(r != bfd_reloc_ok) {
+            /* TODO: Error messages? Copy from moxie as always? */
+            (*info->callbacks->warning)(info, "relocation error", name, input_bfd, input_section, rel->r_offset);
+        }
+    }
+
+    return true;
+}
+
 #define TARGET_LITTLE_SYM favor_elf32_vec
 #define TARGET_LITTLE_NAME "elf32-favor"
 #define ELF_ARCH         bfd_arch_favor
@@ -80,5 +162,7 @@ favor_elf_info_to_howto(bfd *abfd ATTRIBUTE_UNUSED,
 #define bfd_elf32_bfd_reloc_type_lookup favor_elf_reloc_type_lookup
 #define bfd_elf32_bfd_reloc_name_lookup favor_elf_reloc_name_lookup
 #define elf_info_to_howto               favor_elf_info_to_howto
+
+#define elf_backend_relocate_section    favor_elf_relocate_section
 
 #include "elf32-target.h"

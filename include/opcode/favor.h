@@ -353,7 +353,7 @@ struct insn {
         struct {
             uint32_t funct : 5;
             uint32_t and_link : 1;
-            uint32_t immediate : 23;
+            uint32_t immediate : 22;
         } jump;
 
         struct {

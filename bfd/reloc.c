@@ -1314,6 +1314,7 @@ _bfd_relocate_contents (reloc_howto_type *howto,
   x = ((x & ~howto->dst_mask)
        | (((x & howto->src_mask) + relocation) & howto->dst_mask));
 
+  printf("relocated -> %lx\n", x);
   /* Put the relocated value back in the object file.  */
   write_reloc (input_bfd, x, location, howto);
   return flag;
