@@ -22,7 +22,7 @@ favor_elf_howto_table[] = {
         0,
         false),
 
-    HOWTO(R_FAVOR_J32,
+    HOWTO(R_FAVOR_J23_PCREL,
         2, // mask off last 2 bits?
         2,
         23,
@@ -30,7 +30,7 @@ favor_elf_howto_table[] = {
         9,
         complain_overflow_bitfield,
         bfd_elf_generic_reloc,
-        "R_FAVOR_J32",
+        "R_FAVOR_J23_PCREL",
         true,
         0xFFFFFFFF,
         0xFFFFFFFF,
@@ -41,8 +41,8 @@ favor_elf_howto_table[] = {
 
 static reloc_howto_type*
 favor_elf_reloc_type_lookup(bfd *abfd ATTRIBUTE_UNUSED, bfd_reloc_code_real_type code) {
-    if(code == BFD_RELOC_NONE)     return &favor_elf_howto_table[R_FAVOR_NONE];
-    if(code == BFD_RELOC_32_PCREL) return &favor_elf_howto_table[R_FAVOR_J32];
+    if(code == BFD_RELOC_NONE)            return &favor_elf_howto_table[R_FAVOR_NONE];
+    if(code == BFD_RELOC_FAVOR_J23_PCREL) return &favor_elf_howto_table[R_FAVOR_J23_PCREL];
     return NULL;
 }
 
