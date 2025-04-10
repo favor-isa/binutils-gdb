@@ -81,7 +81,6 @@ favor_final_link_relocate (reloc_howto_type *howto,
 			   Elf_Internal_Rela *rel,
 			   bfd_vma relocation)
 {
-    printf("favor final link !!: %lx %lx %lx\n", rel->r_offset, rel->r_addend, relocation);
     return _bfd_final_link_relocate(howto, input_bfd, input_section,
         contents, rel->r_offset, relocation, rel->r_addend);
 }

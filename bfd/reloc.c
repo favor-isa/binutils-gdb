@@ -1210,7 +1210,6 @@ _bfd_relocate_contents (reloc_howto_type *howto,
 
   /* Get the value we are going to relocate.  */
   x = read_reloc (input_bfd, location, howto);
-  printf("initial x value = %lx\n", x);
 
   /* Check for overflow.  FIXME: We may drop bits during the addition
      which we don't check for.  We must either check at every single
@@ -1233,7 +1232,6 @@ _bfd_relocate_contents (reloc_howto_type *howto,
       a = (relocation & addrmask) >> rightshift;
       b = (x & howto->src_mask & addrmask) >> bitpos;
       addrmask >>= rightshift;
-      printf("a = %lx, b = %lx\n", a, b);
 
       switch (howto->complain_on_overflow)
 	{
@@ -1308,19 +1306,14 @@ _bfd_relocate_contents (reloc_howto_type *howto,
 	}
     }
 
-  printf("relocation -> %lx\n", relocation);
-
   /* Put RELOCATION in the right bits.  */
   relocation >>= (bfd_vma) rightshift;
   relocation <<= (bfd_vma) bitpos;
-
-  printf("relocation => %lx\n", relocation);
 
   /* Add RELOCATION to the right bits of X.  */
   x = ((x & ~howto->dst_mask)
        | (((x & howto->src_mask) + relocation) & howto->dst_mask));
 
-  printf("relocated -> %lx\n", x);
   /* Put the relocated value back in the object file.  */
   write_reloc (input_bfd, x, location, howto);
   return flag;

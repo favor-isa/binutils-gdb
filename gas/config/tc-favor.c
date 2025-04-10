@@ -207,7 +207,7 @@ md_assemble(char *str) {
     expressionS exp;
     char *where = NULL;
 
-    printf("line = [%s]\n", str);
+    // printf("line = [%s]\n", str);
     
     /* For now, if we find 'a' on the string, output 4 bytes.. */
 
@@ -333,11 +333,8 @@ md_apply_fix(fixS *fixP ATTRIBUTE_UNUSED, valueT *valP ATTRIBUTE_UNUSED, segT se
     // to bfd/bfd.h.
     case BFD_RELOC_FAVOR_J22_PCREL:
         // TODO: CUstom relocation
-        printf("incoming reloc: %x\n", val);
         uint32_t insn = get(buf);
-        printf("incoming insn: %x\n", insn);
         insn |= (val >> 2) << 10;
-        printf("outgoing insn: %x\n", insn);
         output(buf, insn);
         if(fixP->fx_addsy == NULL) {
             // Done with fixes that have no symbol, as they're always
@@ -359,7 +356,6 @@ md_number_to_chars(char *ptr, valueT use, int nbytes) {
 
 arelent*
 tc_gen_reloc(asection *section ATTRIBUTE_UNUSED, fixS *fixp) {
-    printf("gen reloc? %s \n", S_GET_NAME(fixp->fx_addsy));
     arelent *rel;
     bfd_reloc_code_real_type r_type;
 
