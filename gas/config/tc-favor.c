@@ -311,10 +311,21 @@ md_parse_option(int c ATTRIBUTE_UNUSED, const char *arg ATTRIBUTE_UNUSED) {
 void
 md_show_usage(FILE *stream ATTRIBUTE_UNUSED) { }
 
+static uint32_t
+get(char *buf) {
+    uint32_t result = 0;
+    result |= (uint32_t)buf[0];
+    result |= ((uint32_t)buf[1] << 8);
+    result |= ((uint32_t)buf[2] << 16);
+    result |= ((uint32_t)buf[3] << 24);
+    return result;
+}
+
 void
 md_apply_fix(fixS *fixP ATTRIBUTE_UNUSED, valueT *valP ATTRIBUTE_UNUSED, segT seg ATTRIBUTE_UNUSED) {
     char *buf = fixP->fx_where + fixP->fx_frag->fr_literal;
-    long val = *valP;
+    uint32_t val = (uint32_t)*valP;
+    // TODO: Check size fits?
 
     switch (fixP->fx_r_type)
     {
@@ -322,11 +333,13 @@ md_apply_fix(fixS *fixP ATTRIBUTE_UNUSED, valueT *valP ATTRIBUTE_UNUSED, segT se
     // to bfd/bfd.h.
     case BFD_RELOC_FAVOR_J23_PCREL:
         // TODO: CUstom relocation
-        buf[3] = val >> 24;
-        buf[2] = val >> 16;
-        //buf[1] = val >> 8;
-        //buf[0] = val >> 0;
-        buf += 4;
+        printf("incoming reloc: %x\n", val);
+        uint32_t insn = get(buf);
+        printf("incoming insn: %x\n", insn);
+        insn |= (val >> 2) << 9;
+        printf("outgoing insn: %x\n", insn);
+        output(buf, insn);
+        //buf += 4;
         break;
     default:
         abort();
