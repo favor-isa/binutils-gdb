@@ -275,7 +275,7 @@ md_assemble(char *str) {
                     4,
                     &exp,
                     true,
-                    BFD_RELOC_FAVOR_J23_PCREL);
+                    BFD_RELOC_FAVOR_J22_PCREL);
 
                 break;
             }
@@ -331,12 +331,12 @@ md_apply_fix(fixS *fixP ATTRIBUTE_UNUSED, valueT *valP ATTRIBUTE_UNUSED, segT se
     {
     // TODO: We probably don't want to use any of the base BFD types, and instead add our own
     // to bfd/bfd.h.
-    case BFD_RELOC_FAVOR_J23_PCREL:
+    case BFD_RELOC_FAVOR_J22_PCREL:
         // TODO: CUstom relocation
         printf("incoming reloc: %x\n", val);
         uint32_t insn = get(buf);
         printf("incoming insn: %x\n", insn);
-        insn |= (val >> 2) << 9;
+        insn |= (val >> 2) << 10;
         printf("outgoing insn: %x\n", insn);
         output(buf, insn);
         //buf += 4;
@@ -372,7 +372,7 @@ tc_gen_reloc(asection *section ATTRIBUTE_UNUSED, fixS *fixp) {
             _("Cannot represent relocation type %s"),
             bfd_get_reloc_code_name(r_type));
 
-        rel->howto = bfd_reloc_type_lookup(stdoutput, BFD_RELOC_FAVOR_J23_PCREL);
+        rel->howto = bfd_reloc_type_lookup(stdoutput, BFD_RELOC_FAVOR_J22_PCREL);
     }
 
     return rel;

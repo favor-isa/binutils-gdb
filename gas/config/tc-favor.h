@@ -18,6 +18,6 @@ static inline int _favor_fatal(const char *str) {
 
 // 4 bytes offset?
 #define md_pcrel_from(FIX) 						\
-	((FIX)->fx_where + (FIX)->fx_frag->fr_address - 4)
+	((FIX)->fx_where + (FIX)->fx_frag->fr_address)
 
 #define md_section_align(SEGMENT, SIZE)     (SIZE)
