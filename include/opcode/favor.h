@@ -376,6 +376,14 @@ struct insn {
         } int2;
 
         struct {
+            uint32_t conditional: 1;
+            uint32_t dest: 5;
+            uint32_t sz: 2;
+            uint32_t funct: 4;
+            uint32_t imm: 16;
+        } int_imm;
+
+        struct {
             uint32_t conditional : 1;
             uint32_t dest : 5;
             uint32_t src1 : 5;
