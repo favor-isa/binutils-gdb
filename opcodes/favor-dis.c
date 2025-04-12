@@ -164,9 +164,8 @@ print_insn_favor(bfd_vma addr, struct disassemble_info *info) {
             }
             pr_cond(pr, stream, 0); // TODO conditional
             // TODO: Figure out sign extension? Also...
-            pr(stream, "\t0x%x", insn.jump.immediate);
-            pr(stream, "\t0x%x", (uint32_t)sign_extend_32(insn.jump.immediate, 21));
-            pr(stream, "\t0x%lx", addr + (sign_extend_32(insn.jump.immediate, 21) * 4));
+            pr(stream, "\t0x");
+            info->print_address_func(addr + (sign_extend_32(insn.jump.immediate, 21) * 4), info);
             break;
         }
         default:
