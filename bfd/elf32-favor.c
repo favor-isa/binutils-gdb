@@ -34,15 +34,79 @@ favor_elf_howto_table[] = {
         false,
         0x00000000,
         0xFFFFFC00,
-        true)
+        true),
+
+    HOWTO(R_FAVOR_IMM16_PCREL,
+        0, // no shift
+        4, // 4 bytes
+        64, // 64 bit relocation
+        true,
+        10, // Left shift by 10. WARNING: We may need a custom relocation function
+            // if we change the thing to not be contiguous.
+        complain_overflow_bitfield,
+        bfd_elf_generic_reloc,
+        "R_FAVOR_IMM16_PCREL",
+        false,
+        0x00000000,
+        0x03FFFC00,
+        true),
+
+    HOWTO(R_FAVOR_IMM32_PCREL,
+        16, // the rest will shift down part of the input
+        4, // 4 bytes
+        64, // 64 bit relocation
+        true,
+        10, // Left shift by 10. WARNING: We may need a custom relocation function
+            // if we change the thing to not be contiguous.
+        complain_overflow_bitfield,
+        bfd_elf_generic_reloc,
+        "R_FAVOR_IMM32_PCREL",
+        false,
+        0x00000000,
+        0x03FFFC00,
+        true),
+
+    HOWTO(R_FAVOR_IMM48_PCREL,
+        32, // the rest will shift down part of the input
+        4, // 4 bytes
+        64, // 64 bit relocation
+        true,
+        10, // Left shift by 10. WARNING: We may need a custom relocation function
+            // if we change the thing to not be contiguous.
+        complain_overflow_bitfield,
+        bfd_elf_generic_reloc,
+        "R_FAVOR_IMM48_PCREL",
+        false,
+        0x00000000,
+        0x03FFFC00,
+        true),
+
+    HOWTO(R_FAVOR_IMM64_PCREL,
+        48, // the rest will shift down part of the input
+        4, // 4 bytes
+        64, // 64 bit relocation
+        true,
+        10, // Left shift by 10. WARNING: We may need a custom relocation function
+            // if we change the thing to not be contiguous.
+        complain_overflow_bitfield,
+        bfd_elf_generic_reloc,
+        "R_FAVOR_IMM64_PCREL",
+        false,
+        0x00000000,
+        0x03FFFC00,
+        true),
 };
 
 #define FAVOR_RELOC_TABLE_SIZE (sizeof(favor_elf_howto_table) / sizeof(*favor_elf_howto_table))
 
 static reloc_howto_type*
 favor_elf_reloc_type_lookup(bfd *abfd ATTRIBUTE_UNUSED, bfd_reloc_code_real_type code) {
-    if(code == BFD_RELOC_NONE)            return &favor_elf_howto_table[R_FAVOR_NONE];
-    if(code == BFD_RELOC_FAVOR_J22_PCREL) return &favor_elf_howto_table[R_FAVOR_J22_PCREL];
+    if(code == BFD_RELOC_NONE)              return &favor_elf_howto_table[R_FAVOR_NONE];
+    if(code == BFD_RELOC_FAVOR_J22_PCREL)   return &favor_elf_howto_table[R_FAVOR_J22_PCREL];
+    if(code == BFD_RELOC_FAVOR_IMM16_PCREL) return &favor_elf_howto_table[R_FAVOR_IMM16_PCREL];
+    if(code == BFD_RELOC_FAVOR_IMM32_PCREL) return &favor_elf_howto_table[R_FAVOR_IMM32_PCREL];
+    if(code == BFD_RELOC_FAVOR_IMM48_PCREL) return &favor_elf_howto_table[R_FAVOR_IMM48_PCREL];
+    if(code == BFD_RELOC_FAVOR_IMM64_PCREL) return &favor_elf_howto_table[R_FAVOR_IMM64_PCREL];
     return NULL;
 }
 

@@ -168,6 +168,18 @@ print_insn_favor(bfd_vma addr, struct disassemble_info *info) {
             info->print_address_func(addr + (sign_extend_32(insn.jump.immediate, 21) * 4), info);
             break;
         }
+        case OP_LS_SPECIAL: {
+            // Probably we want op to just be a psuedoop, so we keep it like this?
+            switch (insn.ls_imm.funct) {
+                case LS_IMM_LD64:    pr(stream, "ldi64   "); break;
+                case LS_IMM_LD48:    pr(stream, "ldi48   "); break;
+                case LS_IMM_LD32:    pr(stream, "ldi32   "); break;
+                case LS_IMM_ADDPC16: pr(stream, "addpc16 "); break;
+            }
+            pr_cond(pr, stream, insn.ls_imm.conditional);
+            pr(stream, "0x%x", insn.ls_imm.imm);
+            break;
+        }
         default:
             pr(stream, "(bad)");
             break;

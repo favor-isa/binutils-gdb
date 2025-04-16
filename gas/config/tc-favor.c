@@ -38,6 +38,8 @@ md_begin(void) {
     }
 
     bfd_set_arch_mach(stdoutput, TARGET_ARCH, 0);
+
+    literal_prefix_dollar_hex = false;
 }
 
 static void
@@ -195,6 +197,23 @@ parse_reg_into(char **str, uint32_t *out, bool comma_first, uint32_t f) {
     return true;
 }
 
+/*
+static bool
+try_parse_reg_into(char **str, uint32_t *out, bool comma_first, uint32_t f) {
+    struct favor_reg_info reg_info;
+    bool success;
+
+    *str = parse_reg(*str, &reg_info, comma_first, &success);
+    if(!success) return false;
+
+    if( f && !reg_info.f) { return false; }
+    if(!f &&  reg_info.f) { return false; }
+
+    *out = reg_info.reg_mask;
+    return true;
+}
+*/
+
 void
 md_assemble(char *str) {
     uint32_t conditional = 0;
@@ -279,6 +298,82 @@ md_assemble(char *str) {
 
                 break;
             }
+            case OP_LOAD: {
+                PARSE_TY();
+                PARSE_CONDITIONAL();
+                if(!ty.f && !ty.u) { as_bad("Use an unsigned load instead"); return; }
+
+                input_line_pointer = str;
+                if(!parse_reg_into(&str, &dst, false, ty.f)) {
+                    as_bad("Expected destination register"); return;
+                }
+
+                if(*str != ',') {
+                    as_bad("Expected comma after destination."); return;
+                }
+                str++;
+
+                // Now there are a few options.
+                // 1. We have a `[reg1 + reg2 + const]` expression.
+                // 2. We have a `[symbol]` expression.
+                // 3. We have a `constant number` expression.
+                // 4. We have a `symbol` expression (treated as a constant).
+                if(*str == '[') {
+                    as_bad("TODO: Loads from registers and such.");
+                    return;
+                }
+
+                // Okay, we're in the 3rd/4th case. use the expression()
+                // functionality.
+                //
+                // We really want to figure out how to do this in a simpler way...
+                // but for now, just frag_more and then create a crazy fixup.
+                input_line_pointer = str;
+                expression(&exp);
+
+                insn = mk_ld_imm(conditional, dst, 0, ty.f, ty.vec, LS_IMM_LD64);
+
+                fix_new_exp (frag_now,
+                    (where - frag_now->fr_literal),
+                    4,
+                    &exp,
+                    true,
+                    BFD_RELOC_FAVOR_IMM64_PCREL);
+
+                output(where, favor_encode(insn));
+
+                where = frag_more(4);
+                insn.ls_imm.funct = LS_IMM_LD48;
+                fix_new_exp (frag_now,
+                    (where - frag_now->fr_literal),
+                    4,
+                    &exp,
+                    true,
+                    BFD_RELOC_FAVOR_IMM48_PCREL);
+                output(where, favor_encode(insn));
+
+                where = frag_more(4);
+                insn.ls_imm.funct = LS_IMM_LD32;
+                fix_new_exp (frag_now,
+                    (where - frag_now->fr_literal),
+                    4,
+                    &exp,
+                    true,
+                    BFD_RELOC_FAVOR_IMM32_PCREL);
+                output(where, favor_encode(insn));
+
+                where = frag_more(4);
+                insn.ls_imm.funct = LS_IMM_ADDPC16;
+                fix_new_exp (frag_now,
+                    (where - frag_now->fr_literal),
+                    4,
+                    &exp,
+                    true,
+                    BFD_RELOC_FAVOR_IMM16_PCREL);
+                // output(where, favor_encode(insn));
+
+                break;
+            }
         }
         output(where, favor_encode(insn));
     }
@@ -324,17 +419,17 @@ get(char *buf) {
 void
 md_apply_fix(fixS *fixP ATTRIBUTE_UNUSED, valueT *valP ATTRIBUTE_UNUSED, segT seg ATTRIBUTE_UNUSED) {
     char *buf = fixP->fx_where + fixP->fx_frag->fr_literal;
-    uint32_t val = (uint32_t)*valP;
+    uint64_t val = (uint64_t)*valP;
     // TODO: Check size fits?
 
     switch (fixP->fx_r_type)
     {
     // TODO: We probably don't want to use any of the base BFD types, and instead add our own
     // to bfd/bfd.h.
-    case BFD_RELOC_FAVOR_J22_PCREL:
+    case BFD_RELOC_FAVOR_J22_PCREL: {
         // TODO: CUstom relocation
         uint32_t insn = get(buf);
-        insn |= (val >> 2) << 10;
+        insn |= ((uint32_t)val >> 2) << 10;
         output(buf, insn);
         if(fixP->fx_addsy == NULL) {
             // Done with fixes that have no symbol, as they're always
@@ -343,6 +438,29 @@ md_apply_fix(fixS *fixP ATTRIBUTE_UNUSED, valueT *valP ATTRIBUTE_UNUSED, segT se
         }
         //buf += 4;
         break;
+    }
+    case BFD_RELOC_FAVOR_IMM16_PCREL:
+    case BFD_RELOC_FAVOR_IMM32_PCREL:
+    case BFD_RELOC_FAVOR_IMM48_PCREL:
+    case BFD_RELOC_FAVOR_IMM64_PCREL:
+    {
+        uint64_t shift = 0;
+        if(fixP->fx_r_type == BFD_RELOC_FAVOR_IMM32_PCREL) shift = 16;
+        if(fixP->fx_r_type == BFD_RELOC_FAVOR_IMM48_PCREL) shift = 32;
+        if(fixP->fx_r_type == BFD_RELOC_FAVOR_IMM64_PCREL) shift = 48;
+
+        // TODO: CUstom relocation
+        uint32_t insn = get(buf);
+        insn |= (uint32_t)((val >> shift) & 0xFFFF) << 10;
+        output(buf, insn);
+        if(fixP->fx_addsy == NULL) {
+            // Done with fixes that have no symbol, as they're always
+            // PC-relative..?
+            fixP->fx_done = 1;
+        }
+        //buf += 4;
+        break;
+    }
     default:
         abort();
     }

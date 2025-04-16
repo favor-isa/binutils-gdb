@@ -188,6 +188,25 @@ enum opcode_flag {
     OP_INT_FLOAT_3 = 0x200,
 };
 
+/**
+ * Conditions--ways to compute a single boolean result based on the status flags.
+ * Always encoded in the same order (and ideally in the same bit position).
+ */
+enum condition {
+    COND_EQ,
+    COND_NE,
+    COND_G,
+    COND_L,
+    COND_GE,
+    COND_LE,
+    COND_GU,
+    COND_LU,
+    COND_GEU,
+    COND_LEU,
+    COND_NEG,
+    COND_POS
+};
+
 enum cc_misc {
     CCM_ILL = 0,
     CCM_NOP,
@@ -292,6 +311,13 @@ enum float2 {
     F2_NEGATE,
     F2_CMP,
     F2_SWIZZLE,
+};
+
+enum ls_imm {
+    LS_IMM_LD64,
+    LS_IMM_LD48,
+    LS_IMM_LD32,
+    LS_IMM_ADDPC16,
 };
 
 enum gpr {
@@ -429,8 +455,17 @@ struct insn {
             uint32_t src1 : 5;
             uint32_t vec : 2;
             uint32_t fp : 1;
-            uint32_t etc : 19;
+            uint32_t etc : 14;
         } ls_special;
+
+        struct {
+            uint32_t conditional : 1;
+            uint32_t dest : 5;
+            uint32_t imm: 16;
+            uint32_t fp : 1;
+            uint32_t vec : 2;
+            uint32_t funct: 3;
+        } ls_imm;
     };
 };
 
@@ -471,6 +506,20 @@ mk_float3(uint32_t conditional, uint32_t dest, uint32_t src1, uint32_t src2, uin
     result.float3.sz = sz;
     result.float3.vec = vec;
     result.float3.funct = funct;
+    return result;
+}
+
+static inline
+struct insn
+mk_ld_imm(uint32_t conditional, uint32_t dest, uint32_t imm, uint32_t fp, uint32_t vec, uint32_t funct) {
+    struct insn result = {0};
+    result.opcode = OP_LS_SPECIAL;
+    result.ls_imm.conditional = conditional;
+    result.ls_imm.dest = dest;
+    result.ls_imm.fp = fp;
+    result.ls_imm.vec = vec;
+    result.ls_imm.funct = funct;
+    result.ls_imm.imm = imm;
     return result;
 }
 
@@ -526,6 +575,15 @@ favor_encode(struct insn insn) {
             value |= (insn.ls.fp          << 24);
             value |= (insn.ls.offset      << 25);
             value |= (insn.ls.shift       << 30);
+            break;
+        }
+        case OP_LS_SPECIAL: {
+            value |= (insn.ls_imm.conditional << 4 );
+            value |= (insn.ls_imm.dest        << 5 );
+            value |= (insn.ls_imm.imm         << 10); // TODO: This needs to be rearranged
+            value |= (insn.ls_imm.vec         << 26);
+            value |= (insn.ls_imm.fp          << 28);
+            value |= (insn.ls_imm.funct       << 29);
             break;
         }
     }
@@ -587,6 +645,22 @@ favor_decode(uint32_t code) {
             insn.ls.fp          = code >> 24;
             insn.ls.offset      = code >> 25;
             insn.ls.shift       = code >> 30;
+            break;
+        }
+        case OP_LS_SPECIAL: {
+            // TODO: Figure out better way to decode this nonsense..?
+            if(code >> 29 <= 7) {
+                // Immediate things?
+                insn.ls_imm.conditional = code >> 4;
+                insn.ls_imm.dest        = code >> 5;
+                insn.ls_imm.imm         = code >> 10; // TODO: This needs to be rearranged
+                insn.ls_imm.vec         = code >> 26;
+                insn.ls_imm.fp          = code >> 28;
+                insn.ls_imm.funct       = code >> 29;
+            }
+            else {
+                // TODO!!!!
+            }
             break;
         }
     }

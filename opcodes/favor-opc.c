@@ -32,6 +32,8 @@ favor_op_table[] = {
     { .name = "syscall", .opcode = OP_CC_MISC_SINGLETON, .funct_cc = CCM_SYSCALL },
 
     { .name = "j", .opcode = OP_JUMP, .funct_j = J_JUMP },
+
+    { .name = "ld", .opcode = OP_LOAD },
 };
 
 size_t favor_op_table_size = sizeof(favor_op_table) / sizeof(*favor_op_table);
