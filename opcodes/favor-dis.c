@@ -177,6 +177,7 @@ print_insn_favor(bfd_vma addr, struct disassemble_info *info) {
                 case LS_IMM_ADDPC16: pr(stream, "addpc16 "); break;
             }
             pr_cond(pr, stream, insn.ls_imm.conditional);
+            pr_gpr(pr, stream, insn.ls_imm.dest, ", ");
             pr(stream, "0x%x", insn.ls_imm.imm);
             break;
         }

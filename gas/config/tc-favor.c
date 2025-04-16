@@ -330,6 +330,12 @@ md_assemble(char *str) {
                 // but for now, just frag_more and then create a crazy fixup.
                 input_line_pointer = str;
                 expression(&exp);
+                // if(exp.X_add_symbol) {
+                //     printf("sym: %d\n", symbol_resolved_p(exp.X_add_symbol));
+                // }
+                // else {
+                //     printf("num: %ld\n", exp.X_add_number);
+                // }
 
                 insn = mk_ld_imm(conditional, dst, 0, ty.f, ty.vec, LS_IMM_LD64);
 
