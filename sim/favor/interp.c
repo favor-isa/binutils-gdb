@@ -59,15 +59,83 @@ opcode_mask(struct favor_sim_cpu *cpu, uint32_t conditional, uint32_t element, u
   return cpu->c_codes[element];
 }
 
-#define APPLY_VEC3(opcode, fn, ...) do { \
-  if(opcode_mask(cpu, opcode.conditional, 0, opcode.vec)) \
-    cpu->gpr[opcode.dest] = fn(cpu->gpr[opcode.src1], cpu->gpr[opcode.src2], ##__VA_ARGS__); \
-  if(opcode_mask(cpu, opcode.conditional, 1, opcode.vec)) \
-    cpu->gpr[opcode.dest | 1] = fn(cpu->gpr[opcode.src1 | 1], cpu->gpr[opcode.src2 | 1], ##__VA_ARGS__); \
-  if(opcode_mask(cpu, opcode.conditional, 2, opcode.vec)) \
-    cpu->gpr[opcode.dest | 2] = fn(cpu->gpr[opcode.src1 | 2], cpu->gpr[opcode.src2 | 2], ##__VA_ARGS__); \
-  if(opcode_mask(cpu, opcode.conditional, 3, opcode.vec)) \
-    cpu->gpr[opcode.dest | 3] = fn(cpu->gpr[opcode.src1 | 3], cpu->gpr[opcode.src2 | 3], ##__VA_ARGS__); \
+static uint64_t
+sign_bit(uint32_t sz) {
+  switch(sz) { 
+    case 0: return                0x80ULL;
+    case 1: return              0x8000ULL;
+    case 2: return          0x80000000ULL;
+    default: return 0x8000000000000000ULL;
+  }
+}
+
+static uint64_t
+sign_bit_shift(uint32_t sz) {
+  switch(sz) { 
+    case 0: return   7;
+    case 1: return  15;
+    case 2: return  31;
+    default: return 63;
+  }
+}
+
+static void
+status_int(struct favor_sim_status *status, uint64_t src1, uint64_t src2, uint64_t dest, uint32_t sz) {
+  status->zero = (dest == 0);
+  status->sign = !!(dest & sign_bit(sz));
+  status->carry = 0;
+  status->overflow = 0;
+}
+
+static void
+status_add(struct favor_sim_status *status, uint64_t src1, uint64_t src2, uint64_t dest, uint32_t sz) {
+  uint64_t signbit = sign_bit(sz);
+
+  status_int(status, src1, src2, dest, sz);
+
+  // Carry bit is set in the following cases:
+  // - Both src1 and src2 have a 1 in the top bit
+  // - Either src1 or src2 have a 1 in the top bit, and the result doesn't
+  status->carry = ((src1 & signbit) && (src2 & signbit))
+    || ((src1 & signbit) && !(dest & signbit))
+    || ((src2 & signbit) && !(dest & signbit));
+
+  // Overflow bit is set in the following cases:
+  // - The sign bits of the two inputs are the same, and the output bit does
+  //   not match.
+  status->overflow = ((src1 & signbit) == (src2 & signbit)) && ((src1 & signbit) != (dest & signbit));
+}
+
+static void
+status_left_shift(struct favor_sim_status *status, uint64_t src1, uint64_t src2, uint64_t dest, uint32_t sz) {
+  status_int(status, src1, src2, dest, sz);
+  
+  // Carry is the last bit shifted out.
+  status->carry = !!((src1 << (src2 - 1)) & sign_bit(sz));
+}
+
+static void
+status_right_shift(struct favor_sim_status *status, uint64_t src1, uint64_t src2, uint64_t dest, uint32_t sz) {
+  status_int(status, src1, src2, dest, sz);
+  
+  // Carry is the last bit shifted out.
+  status->carry = !!((src1 >> (src2 - 1)) & 1);
+}
+
+#define APPLY_SINGLE_VEC3(opcode, fn, statusfn, idx, ...) \
+  if(opcode_mask(cpu, opcode.conditional, 0, opcode.vec)) { \
+    uint64_t _src1 = cpu->gpr[opcode.src1]; \
+    uint64_t _src2 = cpu->gpr[opcode.src2]; \
+    uint64_t _dest = fn(_src1, _src2, ##__VA_ARGS__); \
+    statusfn(&cpu->status[0 | idx], _src1, _src2, _dest, opcode.sz); \
+    cpu->gpr[opcode.dest | idx] = _dest; \
+  }
+
+#define APPLY_VEC3(opcode, fn, statusfn, ...) do { \
+  APPLY_SINGLE_VEC3(opcode, fn, statusfn, 0, __VA_ARGS__) \
+  APPLY_SINGLE_VEC3(opcode, fn, statusfn, 1, __VA_ARGS__) \
+  APPLY_SINGLE_VEC3(opcode, fn, statusfn, 2, __VA_ARGS__) \
+  APPLY_SINGLE_VEC3(opcode, fn, statusfn, 3, __VA_ARGS__) \
 } while(0)
 
 #define MASKED_ARITH(src1, src2, sz, op) mask_sz(src1 op src2, sz)
@@ -107,6 +175,38 @@ rshs(uint64_t a, uint64_t b, uint32_t sz) {
   // TODO: Is that a problem for other ops? Do we want to have our registers
   // always sign extended? Doesn't that mess up multiplication?
   return mask_sz((uint64_t)(as >> bs), sz); 
+}
+
+static
+uint64_t
+ror(uint64_t a, uint64_t b, uint32_t sz) {
+  uint32_t shift = sign_bit_shift(sz);
+
+  if(b > 64) b = 64;
+  
+  while(b) {
+    a = (a >> 1) | ((a & 1) << shift);
+
+    b -= 1;
+  }
+
+  return mask_sz(a, sz);
+}
+
+static
+uint64_t
+rol(uint64_t a, uint64_t b, uint32_t sz) {
+  uint32_t signbit = sign_bit(sz);
+
+  if(b > 64) b = 64;
+
+  while(b) {
+    a = (a << 1) | !!(a & signbit);
+
+    b -= 1;
+  }
+
+  return mask_sz(a, sz);
 }
 
 static uint64_t
@@ -185,19 +285,21 @@ sim_engine_run (SIM_DESC sd,
                 break;
             case OP_INT3:
                 switch(insn.int3.funct) {
-                  case I3_ADD: APPLY_VEC3(insn.int3, MASKED_ARITH, insn.int3.sz, +); break;
-                  case I3_SUB: APPLY_VEC3(insn.int3, MASKED_ARITH, insn.int3.sz, -); break;
-                  case I3_LSH: APPLY_VEC3(insn.int3, MASKED_ARITH, insn.int3.sz, <<); break;
-                  case I3_RSHU: APPLY_VEC3(insn.int3, MASKED_ARITH, insn.int3.sz, >>); break;
-                  case I3_RSHS: APPLY_VEC3(insn.int3, rshs, insn.int3.sz); break;
+                  case I3_ADD: APPLY_VEC3(insn.int3, MASKED_ARITH, status_add, insn.int3.sz, +); break;
+                  case I3_SUB: APPLY_VEC3(insn.int3, MASKED_ARITH, status_add, insn.int3.sz, -); break;
+                  case I3_LSH: APPLY_VEC3(insn.int3, MASKED_ARITH, status_left_shift, insn.int3.sz, <<); break;
+                  case I3_RSHU: APPLY_VEC3(insn.int3, MASKED_ARITH, status_right_shift, insn.int3.sz, >>); break;
+                  case I3_RSHS: APPLY_VEC3(insn.int3, rshs, status_right_shift, insn.int3.sz); break;
                   // TODO: rol, ror
-                  case I3_AND: APPLY_VEC3(insn.int3, MASKED_ARITH, insn.int3.sz, &); break;
-                  case I3_OR: APPLY_VEC3(insn.int3, MASKED_ARITH, insn.int3.sz, |); break;
-                  case I3_XOR: APPLY_VEC3(insn.int3, MASKED_ARITH, insn.int3.sz, ^); break;
-                  case I3_MINU: APPLY_VEC3(insn.int3, minu, insn.int3.sz); break;
-                  case I3_MINS: APPLY_VEC3(insn.int3, mins, insn.int3.sz); break;
-                  case I3_MAXU: APPLY_VEC3(insn.int3, maxu, insn.int3.sz); break;
-                  case I3_MAXS: APPLY_VEC3(insn.int3, maxs, insn.int3.sz); break;
+                  case I3_ROL: APPLY_VEC3(insn.int3, rol, status_left_shift, insn.int3.sz); break;
+                  case I3_ROR: APPLY_VEC3(insn.int3, ror, status_right_shift, insn.int3.sz); break;
+                  case I3_AND: APPLY_VEC3(insn.int3, MASKED_ARITH, status_int, insn.int3.sz, &); break;
+                  case I3_OR: APPLY_VEC3(insn.int3, MASKED_ARITH, status_int, insn.int3.sz, |); break;
+                  case I3_XOR: APPLY_VEC3(insn.int3, MASKED_ARITH, status_int, insn.int3.sz, ^); break;
+                  case I3_MINU: APPLY_VEC3(insn.int3, minu, status_int, insn.int3.sz); break;
+                  case I3_MINS: APPLY_VEC3(insn.int3, mins, status_int, insn.int3.sz); break;
+                  case I3_MAXU: APPLY_VEC3(insn.int3, maxu, status_int, insn.int3.sz); break;
+                  case I3_MAXS: APPLY_VEC3(insn.int3, maxs, status_int, insn.int3.sz); break;
                 }
                 break;
             case OP_JUMP: {
