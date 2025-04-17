@@ -122,8 +122,11 @@ status_right_shift(struct favor_sim_status *status, uint64_t src1, uint64_t src2
   status->carry = !!((src1 >> (src2 - 1)) & 1);
 }
 
+static void
+status1_nop(struct favor_sim_status*, uint64_t, uint64_t) { }
+
 #define APPLY_SINGLE_VEC3(opcode, fn, statusfn, idx, ...) \
-  if(opcode_mask(cpu, opcode.conditional, 0, opcode.vec)) { \
+  if(opcode_mask(cpu, opcode.conditional, idx, opcode.vec)) { \
     uint64_t _src1 = cpu->gpr[opcode.src1]; \
     uint64_t _src2 = cpu->gpr[opcode.src2]; \
     uint64_t _dest = fn(_src1, _src2, ##__VA_ARGS__); \
@@ -138,7 +141,34 @@ status_right_shift(struct favor_sim_status *status, uint64_t src1, uint64_t src2
   APPLY_SINGLE_VEC3(opcode, fn, statusfn, 3, __VA_ARGS__) \
 } while(0)
 
+#define APPLY_SINGLE_VEC3_X1(opcode, fn, statusfn, idx, ...) \
+  if(opcode_mask(cpu, opcode.conditional, idx, opcode.vec)) { \
+    uint64_t _in   = cpu->gpr[opcode.dest]; \
+    uint64_t _dest = fn(_in, ##__VA_ARGS__); \
+    statusfn(&cpu->status[0 | idx], _in, _dest); /* TODO: sz? */ \
+    cpu->gpr[opcode.dest | idx] = _dest; \
+    TRACE_ALU(scpu, "reg %d <- %lx", (opcode.dest | idx), _dest); \
+  }
+
+#define APPLY_VEC3_X1(opcode, fn, statusfn, ...) do { \
+  APPLY_SINGLE_VEC3_X1(opcode, fn, statusfn, 0, __VA_ARGS__) \
+  APPLY_SINGLE_VEC3_X1(opcode, fn, statusfn, 1, __VA_ARGS__) \
+  APPLY_SINGLE_VEC3_X1(opcode, fn, statusfn, 2, __VA_ARGS__) \
+  APPLY_SINGLE_VEC3_X1(opcode, fn, statusfn, 3, __VA_ARGS__) \
+} while(0)
+
 #define MASKED_ARITH(src1, src2, sz, op) mask_sz(src1 op src2, sz)
+
+static uint64_t
+ld_imm(uint64_t in, uint32_t funct, uint64_t imm, uint64_t pc) {
+  switch(funct) {
+    case LS_IMM_LD64:    return       (imm << 48ULL); // replaces the value
+    case LS_IMM_LD48:    return (in | (imm << 32ULL)); 
+    case LS_IMM_LD32:    return (in | (imm << 16ULL));
+    case LS_IMM_ADDPC16: return (in | (imm <<  0ULL)) + pc;
+    default: return in; // TODO: fault?
+  }
+}
 
 static uint64_t
 mask_sz(uint64_t value, uint32_t sz) {
@@ -310,6 +340,10 @@ sim_engine_run (SIM_DESC sd,
                 do_increment_pc = false;
               }
               break;
+            }
+            // TODO: Switch to psuedo-ops?
+            case OP_LS_SPECIAL: {
+              APPLY_VEC3_X1(insn.ls_imm, ld_imm, status1_nop, insn.ls_imm.funct, insn.ls_imm.imm, cpu->pc);
             }
             default:
                 break;
