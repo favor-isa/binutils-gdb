@@ -49,10 +49,23 @@ md_begin(void) {
 static void
 output(void *where, uint32_t code) {
     unsigned char *output = where;
-    output[0] = (code >> 0) & 0xFF;
-    output[1] = (code >> 8) & 0xFF;
+    output[0] = (code >> 0)  & 0xFF;
+    output[1] = (code >> 8)  & 0xFF;
     output[2] = (code >> 16) & 0xFF;
     output[3] = (code >> 24) & 0xFF;
+}
+
+static uint32_t
+read_code(void *where) {
+    unsigned char *input = where;
+    uint32_t code = 0;
+
+    code |= (input[0] << 0) ;
+    code |= (input[1] << 8) ;
+    code |= (input[2] << 16);
+    code |= (input[3] << 24);
+
+    return code;
 }
 
 static char*
@@ -370,10 +383,9 @@ md_assemble(char *str) {
                     0,
                     RELAX_LD);
 
-                output(where, 0);
-                return; // Don't output anything yet.
-
-                // output(where, favor_encode(insn));
+                // This will be replaced by md_convert_frag. We need to provide
+                // it with the correct starting info though.
+                insn = mk_ld_imm(conditional, dst, 0, ty.f, ty.vec, LS_IMM_LD64);
 
                 break;
             }
@@ -415,7 +427,9 @@ md_convert_frag (bfd *abfd ATTRIBUTE_UNUSED, segT asec ATTRIBUTE_UNUSED,
 {
     expressionS exp = {0};
     uint64_t final_value = (uint64_t)((int64_t)fragp->fr_offset);
-    struct insn insn;
+    // Initial instruction.
+    struct insn insn = favor_decode(read_code(fragp->fr_literal + fragp->fr_fix - 4));
+
     if(fragp->fr_symbol) {
         final_value += S_GET_VALUE(fragp->fr_symbol);
         printf("symbol: S_IS_DEFINED = %d, resolved_p = %d\n", S_IS_DEFINED(fragp->fr_symbol), symbol_resolved_p(fragp->fr_symbol));
@@ -431,9 +445,10 @@ md_convert_frag (bfd *abfd ATTRIBUTE_UNUSED, segT asec ATTRIBUTE_UNUSED,
     fragp->fr_fix += 12;
     char *where = fragp->fr_literal + fragp->fr_fix - 16;
 
-    // TODO: We probably want to encode the conditional, vec, etc into the
-    // fragment.
-    insn = mk_ld_imm(0, 0, 0, 0, 0, LS_IMM_LD64);
+    // The insn was created by the md_assemble function. At this point, we just
+    // rewrite the funct field.
+    gas_assert(insn.opcode == OP_LS_SPECIAL);
+    insn.ls_imm.funct = LS_IMM_LD64;
 
     fix_new_exp (fragp,
         (where - fragp->fr_literal),
