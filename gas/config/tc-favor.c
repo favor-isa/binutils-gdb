@@ -15,6 +15,10 @@ const char FLT_CHARS[]            = "fFdD";
 static htab_t opcode_hash;
 static htab_t reg_hash;
 
+enum relax_types {
+    RELAX_LD,
+};
+
 void
 md_operand(expressionS *exp ATTRIBUTE_UNUSED) {}
 
@@ -214,6 +218,29 @@ try_parse_reg_into(char **str, uint32_t *out, bool comma_first, uint32_t f) {
 }
 */
 
+static void
+end_frag_with_exp(expressionS *exp, size_t max_chars, size_t var, relax_substateT substate) {
+    symbolS *sym;
+    offsetT offset;
+    switch (exp->X_op)
+    {
+    case O_symbol:
+        sym = exp->X_add_symbol;
+        offset = exp->X_add_number;
+    break;
+    case O_constant:
+        sym = NULL;
+        offset = exp->X_add_number;
+    break;
+    default:
+        sym = make_expr_symbol (exp);
+        offset = 0;
+    break;
+    }
+    frag_var (rs_machine_dependent, max_chars, var,
+        substate, sym, offset, NULL/*offset, opcode*/);
+}
+
 void
 md_assemble(char *str) {
     uint32_t conditional = 0;
@@ -337,45 +364,15 @@ md_assemble(char *str) {
                 //     printf("num: %ld\n", exp.X_add_number);
                 // }
 
-                insn = mk_ld_imm(conditional, dst, 0, ty.f, ty.vec, LS_IMM_LD64);
+                //insn = mk_ld_imm(conditional, dst, 0, ty.f, ty.vec, LS_IMM_LD64);
+                end_frag_with_exp(&exp,
+                    12,
+                    0,
+                    RELAX_LD);
 
-                fix_new_exp (frag_now,
-                    (where - frag_now->fr_literal),
-                    4,
-                    &exp,
-                    true,
-                    BFD_RELOC_FAVOR_IMM64_PCREL);
+                output(where, 0);
+                return; // Don't output anything yet.
 
-                output(where, favor_encode(insn));
-
-                where = frag_more(4);
-                insn.ls_imm.funct = LS_IMM_LD48;
-                fix_new_exp (frag_now,
-                    (where - frag_now->fr_literal),
-                    4,
-                    &exp,
-                    true,
-                    BFD_RELOC_FAVOR_IMM48_PCREL);
-                output(where, favor_encode(insn));
-
-                where = frag_more(4);
-                insn.ls_imm.funct = LS_IMM_LD32;
-                fix_new_exp (frag_now,
-                    (where - frag_now->fr_literal),
-                    4,
-                    &exp,
-                    true,
-                    BFD_RELOC_FAVOR_IMM32_PCREL);
-                output(where, favor_encode(insn));
-
-                where = frag_more(4);
-                insn.ls_imm.funct = LS_IMM_ADDPC16;
-                fix_new_exp (frag_now,
-                    (where - frag_now->fr_literal),
-                    4,
-                    &exp,
-                    true,
-                    BFD_RELOC_FAVOR_IMM16_PCREL);
                 // output(where, favor_encode(insn));
 
                 break;
@@ -411,6 +408,81 @@ md_parse_option(int c ATTRIBUTE_UNUSED, const char *arg ATTRIBUTE_UNUSED) {
 
 void
 md_show_usage(FILE *stream ATTRIBUTE_UNUSED) { }
+
+void
+md_convert_frag (bfd *abfd ATTRIBUTE_UNUSED, segT asec ATTRIBUTE_UNUSED,
+		 fragS *fragp)
+{
+    expressionS exp = {0};
+    uint64_t final_value = (uint64_t)((int64_t)fragp->fr_offset);
+    struct insn insn;
+    if(fragp->fr_symbol) {
+        final_value += S_GET_VALUE(fragp->fr_symbol);
+        printf("symbol: S_IS_DEFINED = %d, resolved_p = %d\n", S_IS_DEFINED(fragp->fr_symbol), symbol_resolved_p(fragp->fr_symbol));
+    }
+    printf("convert frag: sym value = %lu\n", final_value);
+    printf("fragp->fr_fix = %ld\n", fragp->fr_fix);
+    printf("fragp->fr_var = %ld\n", fragp->fr_var);
+
+    exp.X_add_number = fragp->fr_offset;
+    exp.X_add_symbol = fragp->fr_symbol;
+    exp.X_op = (exp.X_add_symbol ? O_symbol : O_constant);
+
+    fragp->fr_fix += 12;
+    char *where = fragp->fr_literal + fragp->fr_fix - 16;
+
+    // TODO: We probably want to encode the conditional, vec, etc into the
+    // fragment.
+    insn = mk_ld_imm(0, 0, 0, 0, 0, LS_IMM_LD64);
+
+    fix_new_exp (fragp,
+        (where - fragp->fr_literal),
+        4,
+        &exp,
+        true,
+        BFD_RELOC_FAVOR_IMM64_PCREL);
+    output(where, favor_encode(insn));
+    where += 4;
+
+    insn.ls_imm.funct = LS_IMM_LD48;
+    fix_new_exp (fragp,
+        (where - fragp->fr_literal),
+        4,
+        &exp,
+        true,
+        BFD_RELOC_FAVOR_IMM48_PCREL);
+    output(where, favor_encode(insn));
+    where += 4;
+
+    insn.ls_imm.funct = LS_IMM_LD32;
+    fix_new_exp (fragp,
+        (where - fragp->fr_literal),
+        4,
+        &exp,
+        true,
+        BFD_RELOC_FAVOR_IMM32_PCREL);
+    output(where, favor_encode(insn));
+    where += 4;
+
+    insn.ls_imm.funct = LS_IMM_ADDPC16;
+    fix_new_exp (fragp,
+        (where - fragp->fr_literal),
+        4,
+        &exp,
+        true,
+        BFD_RELOC_FAVOR_IMM16_PCREL);
+    output(where, favor_encode(insn));
+    // where += 4;
+
+    if(fragp->fr_next) {
+        fragp->fr_next->fr_address = fragp->fr_address + fragp->fr_fix;
+    }
+}
+
+int
+md_estimate_size_before_relax (fragS* fragp, segT) {
+    return fragp->fr_fix + 16; /* Worst case...? */
+}
 
 static uint32_t
 get(char *buf) {

@@ -13,8 +13,8 @@ static inline int _favor_fatal(const char *str) {
     return 0;
 }
 
-#define md_estimate_size_before_relax(A, B) (_favor_fatal (_("estimate size\n")))
-#define md_convert_frag(B, S, F)            (_favor_fatal (_("convert_frag\n")))
+// #define md_estimate_size_before_relax(A, B) (_favor_fatal (_("estimate size\n")))
+// #define md_convert_frag(B, S, F)            (_favor_fatal (_("convert_frag\n")))
 
 // 4 bytes offset?
 #define md_pcrel_from(FIX) 						\
