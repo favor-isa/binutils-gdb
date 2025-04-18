@@ -134,7 +134,7 @@ struct favor_op_info {
 
     uint32_t opcode;
     
-    union { int32_t funct_u; uint32_t funct_cc; uint32_t funct_j; };
+    union { int32_t funct_u; uint32_t funct_cc; uint32_t funct_j; uint32_t funct; };
     int32_t funct_s;
     int32_t funct_f;
     int32_t funct_x;
@@ -155,6 +155,18 @@ struct favor_reg_info {
     uint32_t reg_mask: 5;
     uint32_t f: 1;
 };
+
+#define FAVOR_OP_TABLE_DECLARE(name) \
+extern struct favor_op_info favor_op_ ## name[]; \
+extern size_t favor_op_ ## name ## _count; \
+
+#define FAVOR_OP_TABLE_DEFINE(name, ...) \
+struct favor_op_info favor_op_ ## name[] = { \
+    __VA_ARGS__ \
+}; \
+size_t favor_op_ ## name ## _count = sizeof(favor_op_ ## name) / sizeof(*favor_op_ ## name);
+
+FAVOR_OP_TABLE_DECLARE(ld_imm)
 
 extern struct favor_op_info favor_op_table[];
 extern size_t favor_op_table_size;

@@ -10,6 +10,16 @@
 #include "opcode/favor.h"
 #include "dis-asm.h"
 
+static const char*
+lookup_opcode(struct favor_op_info *table, size_t size, uint32_t funct) {
+    if(funct < size) {
+        return table[funct].name;
+    }
+    return NULL;
+}
+
+#define LOOKUP_OPCODE(table, funct) lookup_opcode(favor_op_ ## table, favor_op_ ## table ## _count, funct)
+
 static void
 pr_cond(fprintf_ftype pr, void *stream, uint32_t conditional) {
     if(conditional) {
@@ -18,6 +28,12 @@ pr_cond(fprintf_ftype pr, void *stream, uint32_t conditional) {
     else {
         pr(stream, " \t");
     }
+}
+
+static void
+pr_opname(fprintf_ftype pr, void *stream, const char *opname, uint32_t conditional) {
+    pr(stream, "%s", opname);
+    pr_cond(pr, stream, conditional);
 }
 
 static void
@@ -170,31 +186,16 @@ print_insn_favor(bfd_vma addr, struct disassemble_info *info) {
         }
         case POP_LD_IMM: {
             // Probably we want op to just be a psuedoop, so we keep it like this?
-            switch (insn.ld_imm.funct) {
-                case LDI3U:    pr(stream, "ldi3u"); break;
-                case LDI3O:    pr(stream, "ldi3o"); break;
+            const char *opname = LOOKUP_OPCODE(ld_imm, insn.ld_imm.funct);
+            if(!opname) goto bad_op;
 
-                case LDI2S:    pr(stream, "ldi2s"); break;
-                case LDI2O:    pr(stream, "ldi2o"); break;
-                case LDI2U:    pr(stream, "ldi2u"); break;
-
-                case LDI1S:    pr(stream, "ldi1s"); break;
-                case LDI1O:    pr(stream, "ldi1o"); break;
-                case LDI1U:    pr(stream, "ldi1u"); break;
-
-                case LDI0S:    pr(stream, "ldi0s"); break;
-                case LDI0O:    pr(stream, "ldi0o"); break;
-                case LDI0U:    pr(stream, "ldi0u"); break;
-
-                case LDI0OPC:  pr(stream, "ldi0opc"); break;
-                case LDI0S32:  pr(stream, "ldi0s32"); break;
-            }
-            pr_cond(pr, stream, insn.ld_imm.conditional);
+            pr_opname(pr, stream, opname, insn.ld_imm.conditional);
             pr_gpr(pr, stream, insn.ld_imm.dest, ", ");
             pr(stream, "0x%x", insn.ld_imm.imm);
             break;
         }
         default:
+bad_op:
             pr(stream, "(bad)");
             break;
     }

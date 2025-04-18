@@ -36,6 +36,26 @@ favor_op_table[] = {
     { .name = "ld", .opcode = OP_LOAD },
 };
 
+FAVOR_OP_TABLE_DEFINE(ld_imm, 
+    { .name = "ldi3u", .opcode = POP_LD_IMM, .funct = LDI3U },
+    { .name = "ldi3o", .opcode = POP_LD_IMM, .funct = LDI3O },
+
+    { .name = "ldi2s", .opcode = POP_LD_IMM, .funct = LDI2S },
+    { .name = "ldi2o", .opcode = POP_LD_IMM, .funct = LDI2O },
+    { .name = "ldi2u", .opcode = POP_LD_IMM, .funct = LDI2U },
+
+    { .name = "ldi1s", .opcode = POP_LD_IMM, .funct = LDI1S },
+    { .name = "ldi1o", .opcode = POP_LD_IMM, .funct = LDI1O },
+    { .name = "ldi1u", .opcode = POP_LD_IMM, .funct = LDI1U },
+
+    { .name = "ldi0s", .opcode = POP_LD_IMM, .funct = LDI0S },
+    { .name = "ldi0o", .opcode = POP_LD_IMM, .funct = LDI0O },
+    { .name = "ldi0u", .opcode = POP_LD_IMM, .funct = LDI0U },
+
+    { .name = "ldi0opc", .opcode = POP_LD_IMM, .funct = LDI0OPC },
+    { .name = "ldi0s32", .opcode = POP_LD_IMM, .funct = LDI0S32 },
+)
+
 size_t favor_op_table_size = sizeof(favor_op_table) / sizeof(*favor_op_table);
 
 #define REG(r) .reg = r, .reg_mask = (r & 0x1F), .f = (r >> 5)

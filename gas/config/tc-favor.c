@@ -30,10 +30,20 @@ md_begin(void) {
     size_t i;
     opcode_hash = str_htab_create();
 
+#define FAVOR_OP_TABLE_INSTALL(table) \
+for(i = 0; i < favor_op_ ## table ## _count; ++i) { \
+    struct favor_op_info *op = &favor_op_ ## table[i]; \
+    str_hash_insert(opcode_hash, op->name, op, 0); \
+}
+
+    FAVOR_OP_TABLE_INSTALL(ld_imm)
+    // TODO: Refactor main table
     for(i = 0; i < favor_op_table_size; ++i) {
         struct favor_op_info *op = &favor_op_table[i];
         str_hash_insert(opcode_hash, op->name, op, 0);
     }
+
+#undef FAVOR_OP_TABLE_INSTALL
 
     reg_hash = str_htab_create();
     for(i = 0; i < favor_reg_table_size; ++i) {
