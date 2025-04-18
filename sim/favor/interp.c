@@ -122,8 +122,8 @@ status_right_shift(struct favor_sim_status *status, uint64_t src1, uint64_t src2
   status->carry = !!((src1 >> (src2 - 1)) & 1);
 }
 
-static void
-status1_nop(struct favor_sim_status*, uint64_t, uint64_t) { }
+// static void
+// status1_nop(struct favor_sim_status*, uint64_t, uint64_t) { }
 
 #define APPLY_SINGLE_VEC3(opcode, fn, statusfn, idx, ...) \
   if(opcode_mask(cpu, opcode.conditional, idx, opcode.vec)) { \
@@ -162,10 +162,10 @@ status1_nop(struct favor_sim_status*, uint64_t, uint64_t) { }
 static uint64_t
 ld_imm(uint64_t in, uint32_t funct, uint64_t imm, uint64_t pc) {
   switch(funct) {
-    case LS_IMM_LD64:    return       (imm << 48ULL); // replaces the value
-    case LS_IMM_LD48:    return (in | (imm << 32ULL)); 
-    case LS_IMM_LD32:    return (in | (imm << 16ULL));
-    case LS_IMM_ADDPC16: return (in | (imm <<  0ULL)) + pc;
+    case LDI3U:   return       (imm << 48ULL); // replaces the value
+    case LDI2O:   return (in | (imm << 32ULL)); 
+    case LDI1O:   return (in | (imm << 16ULL));
+    case LDI0OPC: return (in | (imm <<  0ULL)) + pc;
     default: return in; // TODO: fault?
   }
 }
@@ -342,8 +342,9 @@ sim_engine_run (SIM_DESC sd,
               break;
             }
             // TODO: Switch to psuedo-ops?
-            case OP_LS_SPECIAL: {
-              APPLY_VEC3_X1(insn.ld_imm, ld_imm, status1_nop, insn.ld_imm.funct, insn.ld_imm.imm, cpu->pc);
+            case POP_LD_IMM: {
+              cpu->gpr[insn.ld_imm.dest] = ld_imm(insn.ld_imm.dest, insn.ld_imm.funct, insn.ld_imm.imm, cpu->pc);
+              //APPLY_VEC3_X1(insn.ld_imm, ld_imm, status1_nop, insn.ld_imm.funct, insn.ld_imm.imm, cpu->pc);
             }
             default:
                 break;

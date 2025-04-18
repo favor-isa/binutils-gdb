@@ -321,7 +321,7 @@ md_assemble(char *str) {
             }
             case OP_JUMP: {
                 PARSE_CONDITIONAL();
-                insn.opcode = OP_JUMP;
+                insn.p_opcode = OP_JUMP;
                 insn.jump.and_link = 0;
                 insn.jump.funct = op_info->funct_j;
                 insn.jump.immediate = 0; // fixup
@@ -385,7 +385,7 @@ md_assemble(char *str) {
 
                 // This will be replaced by md_convert_frag. We need to provide
                 // it with the correct starting info though.
-                insn = mk_ld_imm(conditional, dst, 0, ty.f, ty.vec, LS_IMM_LD64);
+                insn = mk_ld_imm(conditional, dst, 0, ty.f, ty.u ? LDI0U : LDI0S);
 
                 break;
             }
@@ -447,8 +447,8 @@ md_convert_frag (bfd *abfd ATTRIBUTE_UNUSED, segT asec ATTRIBUTE_UNUSED,
 
     // The insn was created by the md_assemble function. At this point, we just
     // rewrite the funct field.
-    gas_assert(insn.opcode == OP_LS_SPECIAL);
-    insn.ls_imm.funct = LS_IMM_LD64;
+    gas_assert(insn.p_opcode == POP_LD_IMM);
+    insn.ld_imm.funct = LDI3U;
 
     fix_new_exp (fragp,
         (where - fragp->fr_literal),
@@ -459,7 +459,7 @@ md_convert_frag (bfd *abfd ATTRIBUTE_UNUSED, segT asec ATTRIBUTE_UNUSED,
     output(where, favor_encode(insn));
     where += 4;
 
-    insn.ls_imm.funct = LS_IMM_LD48;
+    insn.ld_imm.funct = LDI2O;
     fix_new_exp (fragp,
         (where - fragp->fr_literal),
         4,
@@ -469,7 +469,7 @@ md_convert_frag (bfd *abfd ATTRIBUTE_UNUSED, segT asec ATTRIBUTE_UNUSED,
     output(where, favor_encode(insn));
     where += 4;
 
-    insn.ls_imm.funct = LS_IMM_LD32;
+    insn.ld_imm.funct = LDI1O;
     fix_new_exp (fragp,
         (where - fragp->fr_literal),
         4,
@@ -479,7 +479,7 @@ md_convert_frag (bfd *abfd ATTRIBUTE_UNUSED, segT asec ATTRIBUTE_UNUSED,
     output(where, favor_encode(insn));
     where += 4;
 
-    insn.ls_imm.funct = LS_IMM_ADDPC16;
+    insn.ld_imm.funct = LDI0OPC;
     fix_new_exp (fragp,
         (where - fragp->fr_literal),
         4,

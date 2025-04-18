@@ -113,7 +113,7 @@ print_insn_favor(bfd_vma addr, struct disassemble_info *info) {
     // We read the opcode, disassemble it.
     struct insn insn = favor_decode(op);
 
-    switch(insn.opcode) {
+    switch(insn.p_opcode) {
         case OP_CC_MISC:
             switch(insn.cc_misc.funct) {
                 case CCM_ILL: pr(stream, "ill"); break;
@@ -168,17 +168,30 @@ print_insn_favor(bfd_vma addr, struct disassemble_info *info) {
             info->print_address_func(addr + (sign_extend_32(insn.jump.immediate, 21) * 4), info);
             break;
         }
-        case OP_LS_SPECIAL: {
+        case POP_LD_IMM: {
             // Probably we want op to just be a psuedoop, so we keep it like this?
-            switch (insn.ls_imm.funct) {
-                case LS_IMM_LD64:    pr(stream, "ldi64   "); break;
-                case LS_IMM_LD48:    pr(stream, "ldi48   "); break;
-                case LS_IMM_LD32:    pr(stream, "ldi32   "); break;
-                case LS_IMM_ADDPC16: pr(stream, "addpc16 "); break;
+            switch (insn.ld_imm.funct) {
+                case LDI3U:    pr(stream, "ldi3u"); break;
+                case LDI3O:    pr(stream, "ldi3o"); break;
+
+                case LDI2S:    pr(stream, "ldi2s"); break;
+                case LDI2O:    pr(stream, "ldi2o"); break;
+                case LDI2U:    pr(stream, "ldi2u"); break;
+
+                case LDI1S:    pr(stream, "ldi1s"); break;
+                case LDI1O:    pr(stream, "ldi1o"); break;
+                case LDI1U:    pr(stream, "ldi1u"); break;
+
+                case LDI0S:    pr(stream, "ldi0s"); break;
+                case LDI0O:    pr(stream, "ldi0o"); break;
+                case LDI0U:    pr(stream, "ldi0u"); break;
+
+                case LDI0OPC:  pr(stream, "ldi0opc"); break;
+                case LDI0S32:  pr(stream, "ldi0s32"); break;
             }
-            pr_cond(pr, stream, insn.ls_imm.conditional);
-            pr_gpr(pr, stream, insn.ls_imm.dest, ", ");
-            pr(stream, "0x%x", insn.ls_imm.imm);
+            pr_cond(pr, stream, insn.ld_imm.conditional);
+            pr_gpr(pr, stream, insn.ld_imm.dest, ", ");
+            pr(stream, "0x%x", insn.ld_imm.imm);
             break;
         }
         default:

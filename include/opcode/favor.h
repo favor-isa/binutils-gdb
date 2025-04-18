@@ -320,11 +320,20 @@ enum float2 {
     F2_SWIZZLE,
 };
 
-enum ls_imm {
-    LS_IMM_LD64,
-    LS_IMM_LD48,
-    LS_IMM_LD32,
-    LS_IMM_ADDPC16,
+enum ld_imm {
+    LDI3U,
+    LDI3O,
+    LDI2S,
+    LDI2U,
+    LDI2O,
+    LDI1S,
+    LDI1U,
+    LDI1O,
+    LDI0S,
+    LDI0U,
+    LDI0O,
+    LDI0OPC,
+    LDI0S32,
 };
 
 enum gpr {
@@ -481,8 +490,8 @@ struct insn {
             uint32_t dest : 5;
             uint32_t imm: 16;
             uint32_t fp : 1;
-            uint32_t vec : 2;
-            uint32_t funct: 3;
+            uint32_t unused : 1;
+            uint32_t funct: 4;
         } ld_imm;
     };
 };
@@ -529,13 +538,12 @@ mk_float3(uint32_t conditional, uint32_t dest, uint32_t src1, uint32_t src2, uin
 
 static inline
 struct insn
-mk_ld_imm(uint32_t conditional, uint32_t dest, uint32_t imm, uint32_t fp, uint32_t vec, uint32_t funct) {
+mk_ld_imm(uint32_t conditional, uint32_t dest, uint32_t imm, uint32_t fp, uint32_t funct) {
     struct insn result = {0};
     result.p_opcode = OP_LS_SPECIAL;
     result.ld_imm.conditional = conditional;
     result.ld_imm.dest = dest;
     result.ld_imm.fp = fp;
-    result.ld_imm.vec = vec;
     result.ld_imm.funct = funct;
     result.ld_imm.imm = imm;
     return result;
@@ -603,9 +611,8 @@ favor_encode(struct insn insn) {
             value |= (insn.ld_imm.conditional << 4 );
             value |= (insn.ld_imm.dest        << 5 );
             value |= (insn.ld_imm.imm         << 10); // TODO: This needs to be rearranged
-            value |= (insn.ld_imm.vec         << 26);
-            value |= (insn.ld_imm.fp          << 28);
-            value |= (insn.ld_imm.funct       << 29);
+            value |= (insn.ld_imm.fp          << 26);
+            value |= (insn.ld_imm.funct       << 28);
             break;
         }
     }
@@ -677,9 +684,8 @@ favor_decode(uint32_t code) {
                 insn.ld_imm.conditional = code >> 4;
                 insn.ld_imm.dest        = code >> 5;
                 insn.ld_imm.imm         = code >> 10; // TODO: This needs to be rearranged
-                insn.ld_imm.vec         = code >> 26;
-                insn.ld_imm.fp          = code >> 28;
-                insn.ld_imm.funct       = code >> 29;
+                insn.ld_imm.fp          = code >> 26;
+                insn.ld_imm.funct       = code >> 28;
             }
             else {
                 // TODO!!!!
