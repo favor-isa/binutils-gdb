@@ -284,7 +284,7 @@ sim_engine_run (SIM_DESC sd,
 
         TRACE_EXTRACT(scpu, "%p: %#08x", pc_addr, op);
 
-        switch(insn.opcode) {
+        switch(insn.p_opcode) {
             case OP_CC_MISC:
                 //TRACE_DECODE(scpu, "%p: %c cc_misc %#x %#08x", pc_addr, (insn.cc_misc.conditional ? 'c' : 'u'), insn.cc_misc., insn.cc_misc.);
 
@@ -343,7 +343,7 @@ sim_engine_run (SIM_DESC sd,
             }
             // TODO: Switch to psuedo-ops?
             case OP_LS_SPECIAL: {
-              APPLY_VEC3_X1(insn.ls_imm, ld_imm, status1_nop, insn.ls_imm.funct, insn.ls_imm.imm, cpu->pc);
+              APPLY_VEC3_X1(insn.ld_imm, ld_imm, status1_nop, insn.ld_imm.funct, insn.ld_imm.imm, cpu->pc);
             }
             default:
                 break;

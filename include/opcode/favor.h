@@ -177,6 +177,13 @@ enum opcode {
     OP_LOAD,
     OP_STORE,
     OP_LS_SPECIAL,
+
+    /* Psuedo-opcodes:
+     * These do not fit in the actual 4-bit opcode field of the instruction.
+     * Instead, they indicate sub-types of the struct insn to make working
+     * with various opcodes easier, such as ld_imm opcodes. */
+    POP_START = 16,
+    POP_LD_IMM,
 };
 
 /**
@@ -365,7 +372,18 @@ enum gpr {
  * Helper struct for easily encoding / decoding instructions.
  */
 struct insn {
-    uint32_t opcode : 4;
+    /**
+     * Psuedo-opcode.
+     * 
+     * This field is either one of the OP_ values, in which case it should generally
+     * be encoded exactly as is into the opcode field of the instruction. But,
+     * it can also be one of the POP_ values, in which case it doesn't represent
+     * a real opcode.
+     * 
+     * In practice, this field is the discriminant of the union.
+     */
+    uint32_t p_opcode : 6;
+
     union {
         struct {
             uint32_t conditional : 1;
@@ -449,14 +467,14 @@ struct insn {
             uint32_t shift : 2;
         } ls; /* load-store */
 
-        struct {
+        /* struct {
             uint32_t conditional : 1;
             uint32_t dest : 5;
             uint32_t src1 : 5;
             uint32_t vec : 2;
             uint32_t fp : 1;
             uint32_t etc : 14;
-        } ls_special;
+        } ls_special; */ /* COME BACK TO THIS */
 
         struct {
             uint32_t conditional : 1;
@@ -465,7 +483,7 @@ struct insn {
             uint32_t fp : 1;
             uint32_t vec : 2;
             uint32_t funct: 3;
-        } ls_imm;
+        } ld_imm;
     };
 };
 
@@ -473,7 +491,7 @@ static inline
 struct insn
 mk_basic_cc_misc(uint32_t conditional, uint32_t funct) {
     struct insn result = {0};
-    result.opcode = OP_CC_MISC;
+    result.p_opcode = OP_CC_MISC;
     result.cc_misc.conditional = conditional;
     result.cc_misc.funct = funct;
     return result;
@@ -483,7 +501,7 @@ static inline
 struct insn
 mk_int3(uint32_t conditional, uint32_t dest, uint32_t src1, uint32_t src2, uint32_t sz, uint32_t vec, uint32_t funct) {
     struct insn result = {0};
-    result.opcode = OP_INT3;
+    result.p_opcode = OP_INT3;
     result.int3.conditional = conditional;
     result.int3.dest = dest;
     result.int3.src1 = src1;
@@ -498,7 +516,7 @@ static inline
 struct insn
 mk_float3(uint32_t conditional, uint32_t dest, uint32_t src1, uint32_t src2, uint32_t sz, uint32_t vec, uint32_t funct) {
     struct insn result = {0};
-    result.opcode = OP_FLOAT3;
+    result.p_opcode = OP_FLOAT3;
     result.float3.conditional = conditional;
     result.float3.dest = dest;
     result.float3.src1 = src1;
@@ -513,13 +531,13 @@ static inline
 struct insn
 mk_ld_imm(uint32_t conditional, uint32_t dest, uint32_t imm, uint32_t fp, uint32_t vec, uint32_t funct) {
     struct insn result = {0};
-    result.opcode = OP_LS_SPECIAL;
-    result.ls_imm.conditional = conditional;
-    result.ls_imm.dest = dest;
-    result.ls_imm.fp = fp;
-    result.ls_imm.vec = vec;
-    result.ls_imm.funct = funct;
-    result.ls_imm.imm = imm;
+    result.p_opcode = OP_LS_SPECIAL;
+    result.ld_imm.conditional = conditional;
+    result.ld_imm.dest = dest;
+    result.ld_imm.fp = fp;
+    result.ld_imm.vec = vec;
+    result.ld_imm.funct = funct;
+    result.ld_imm.imm = imm;
     return result;
 }
 
@@ -527,9 +545,12 @@ static inline
 uint32_t
 favor_encode(struct insn insn) {
     uint32_t value = 0;
-    value |= (insn.opcode);
+    if(insn.p_opcode < 16) {
+        // Psuedo instructions will have to set the opcode explicitly.
+        value |= (insn.p_opcode);
+    }
 
-    switch(insn.opcode) {
+    switch(insn.p_opcode) {
         case OP_CC_MISC:
             value |= (insn.cc_misc.conditional << 4);
             value |= (insn.cc_misc.dest        << 5);
@@ -577,13 +598,14 @@ favor_encode(struct insn insn) {
             value |= (insn.ls.shift       << 30);
             break;
         }
-        case OP_LS_SPECIAL: {
-            value |= (insn.ls_imm.conditional << 4 );
-            value |= (insn.ls_imm.dest        << 5 );
-            value |= (insn.ls_imm.imm         << 10); // TODO: This needs to be rearranged
-            value |= (insn.ls_imm.vec         << 26);
-            value |= (insn.ls_imm.fp          << 28);
-            value |= (insn.ls_imm.funct       << 29);
+        case POP_LD_IMM: {
+            value |= OP_LS_SPECIAL; // Subset of ls-special
+            value |= (insn.ld_imm.conditional << 4 );
+            value |= (insn.ld_imm.dest        << 5 );
+            value |= (insn.ld_imm.imm         << 10); // TODO: This needs to be rearranged
+            value |= (insn.ld_imm.vec         << 26);
+            value |= (insn.ld_imm.fp          << 28);
+            value |= (insn.ld_imm.funct       << 29);
             break;
         }
     }
@@ -597,9 +619,9 @@ favor_decode(uint32_t code) {
     struct insn insn;
 
     // Do bitfields automatically get masked out? Convenient if true.
-    insn.opcode = code;
+    insn.p_opcode = code;
 
-    switch(insn.opcode) {
+    switch(insn.p_opcode) {
         case OP_CC_MISC:
             insn.cc_misc.conditional = code >> 4;
             insn.cc_misc.dest        = code >> 5;
@@ -651,12 +673,13 @@ favor_decode(uint32_t code) {
             // TODO: Figure out better way to decode this nonsense..?
             if(code >> 29 <= 7) {
                 // Immediate things?
-                insn.ls_imm.conditional = code >> 4;
-                insn.ls_imm.dest        = code >> 5;
-                insn.ls_imm.imm         = code >> 10; // TODO: This needs to be rearranged
-                insn.ls_imm.vec         = code >> 26;
-                insn.ls_imm.fp          = code >> 28;
-                insn.ls_imm.funct       = code >> 29;
+                insn.p_opcode = POP_LD_IMM;
+                insn.ld_imm.conditional = code >> 4;
+                insn.ld_imm.dest        = code >> 5;
+                insn.ld_imm.imm         = code >> 10; // TODO: This needs to be rearranged
+                insn.ld_imm.vec         = code >> 26;
+                insn.ld_imm.fp          = code >> 28;
+                insn.ld_imm.funct       = code >> 29;
             }
             else {
                 // TODO!!!!
