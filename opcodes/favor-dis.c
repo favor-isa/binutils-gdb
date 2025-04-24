@@ -197,13 +197,20 @@ print_insn_favor(bfd_vma addr, struct disassemble_info *dis_info) {
             break;
         }
         case OP_JUMP: {
+            int32_t jump_off = (sign_extend_32(insn.jump.immediate, 21) * 4);
+            // We'll never hit the maximum negative value because the immediate
+            // value isn't large enough.
+            uint32_t jump_off_abs = (uint32_t)((jump_off < 0) ? -jump_off : jump_off);
+
             switch(insn.jump.funct) {
                 case J_JUMP: pr_opname(info, "j"); break;
             }
             pr_cond(info, 0); // TODO conditional
             // TODO: Figure out sign extension? Also...
-            FPRINTF("0x");
-            dis_info->print_address_func(addr + (sign_extend_32(insn.jump.immediate, 21) * 4), dis_info);
+
+            FPRINTF("%c%#x ", " -"[jump_off < 0], jump_off_abs);
+            FPRINTF("# 0x");
+            dis_info->print_address_func(addr + jump_off, dis_info);
             break;
         }
         case POP_LD_IMM: {
