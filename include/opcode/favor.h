@@ -223,6 +223,7 @@ enum condition {
     COND_GEU,
     COND_LEU,
     COND_NEG,
+    // really non-negative: todo better name?
     COND_POS
 };
 
@@ -237,6 +238,12 @@ enum cc_misc {
     CCM_SETL,
     CCM_SETGE,
     CCM_SETLE,
+    CCM_SETGU,
+    CCM_SETLU,
+    CCM_SETGEU,
+    CCM_SETLEU,
+    CCM_SETNEG,
+    CCM_SETPOS,
     CCM_TEST, /* Test the dest register, set C = 1 if the bit is set */
     CCM_READC,
     CCM_WRITEC,

@@ -79,6 +79,25 @@ sign_bit_shift(uint32_t sz) {
   }
 }
 
+static bool
+compute_condition(struct favor_sim_status *status, int condition) {
+  switch(condition) {
+    case COND_EQ:  return  status->zero;
+    case COND_NE:  return !status->zero;
+    case COND_G:   return !status->zero && (status->sign == status->overflow);
+    case COND_L:   return  status->sign != status->overflow;
+    case COND_GE:  return  status->sign == status->overflow;
+    case COND_LE:  return  status->zero && (status->sign != status->overflow);
+    case COND_GU:  return  status->carry && !status->zero;
+    case COND_LU:  return !status->carry;
+    case COND_GEU: return  status->carry;
+    case COND_LEU: return !status->carry ||  status->zero;
+    case COND_NEG: return  status->sign;
+    case COND_POS: return !status->sign;
+  }
+  return 0;
+}
+
 static void
 status_int(struct favor_sim_status *status, uint64_t src1, uint64_t src2, uint64_t dest, uint32_t sz) {
   status->zero = (dest == 0);
@@ -155,6 +174,18 @@ status_right_shift(struct favor_sim_status *status, uint64_t src1, uint64_t src2
   APPLY_SINGLE_VEC3_X1(opcode, fn, statusfn, 1, __VA_ARGS__) \
   APPLY_SINGLE_VEC3_X1(opcode, fn, statusfn, 2, __VA_ARGS__) \
   APPLY_SINGLE_VEC3_X1(opcode, fn, statusfn, 3, __VA_ARGS__) \
+} while(0)
+
+#define APPLY_SINGLE_VEC_GENERIC(opcode, fn, idx) \
+  if(opcode_mask(cpu, opcode.conditional, idx, opcode.vec)) { \
+    fn(idx) ; \
+  }
+
+#define APPLY_VEC_GENERIC(opcode, fn) do { \
+  APPLY_SINGLE_VEC_GENERIC(opcode, fn, 0) \
+  APPLY_SINGLE_VEC_GENERIC(opcode, fn, 1) \
+  APPLY_SINGLE_VEC_GENERIC(opcode, fn, 2) \
+  APPLY_SINGLE_VEC_GENERIC(opcode, fn, 3) \
 } while(0)
 
 #define MASKED_ARITH(src1, src2, sz, op) mask_sz(src1 op src2, sz)
@@ -286,6 +317,14 @@ sim_engine_run (SIM_DESC sd,
 
         switch(insn.p_opcode) {
             case OP_CC_MISC:
+                if(insn.cc_misc.funct >= CCM_SETEQ && insn.cc_misc.funct <= CCM_SETNEG) {
+                  int condition = insn.cc_misc.funct - CCM_SETEQ;
+                  #define FN(idx) cpu->c_codes[idx] = compute_condition(&cpu->status[idx], condition);
+                  APPLY_VEC_GENERIC(insn.cc_misc, FN);
+                  #undef FN
+
+                  break;
+                }
                 //TRACE_DECODE(scpu, "%p: %c cc_misc %#x %#08x", pc_addr, (insn.cc_misc.conditional ? 'c' : 'u'), insn.cc_misc., insn.cc_misc.);
 
                 switch(insn.cc_misc.funct) {
