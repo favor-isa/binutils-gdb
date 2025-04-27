@@ -82,40 +82,9 @@ pr_type(struct favor_dis_info *info, uint32_t fp, uint32_t is_signed, uint32_t s
 
 static void
 pr_gpr(struct favor_dis_info *info, uint32_t reg, const char *after) {
-    switch(reg) {
-        case 0:  FPRINTF("a0%s", after); break;
-        case 1:  FPRINTF("a1%s", after); break;
-        case 2:  FPRINTF("a2%s", after); break;
-        case 3:  FPRINTF("a3%s", after); break;
-        case 4:  FPRINTF("a4%s", after); break;
-        case 5:  FPRINTF("a5%s", after); break;
-        case 6:  FPRINTF("a6%s", after); break;
-        case 7:  FPRINTF("a7%s", after); break;
-        case 8:  FPRINTF("v0%s", after); break;
-        case 9:  FPRINTF("v1%s", after); break;
-        case 10: FPRINTF("v2%s", after); break;
-        case 11: FPRINTF("v3%s", after); break;
-        case 12: FPRINTF("v4%s", after); break;
-        case 13: FPRINTF("v5%s", after); break;
-        case 14: FPRINTF("v6%s", after); break;
-        case 15: FPRINTF("v7%s", after); break;
-        case 16: FPRINTF("t0%s", after); break;
-        case 17: FPRINTF("t1%s", after); break;
-        case 18: FPRINTF("t2%s", after); break;
-        case 19: FPRINTF("t3%s", after); break;
-        case 20: FPRINTF("t4%s", after); break;
-        case 21: FPRINTF("t5%s", after); break;
-        case 22: FPRINTF("t6%s", after); break;
-        case 23: FPRINTF("t7%s", after); break;
-        case 24: FPRINTF("t8%s", after); break;
-        case 25: FPRINTF("t9%s", after); break;
-        case 26: FPRINTF("t10%s", after); break;
-        case 27: FPRINTF("t11%s", after); break;
-        case 28: FPRINTF("sp%s", after); break;
-        case 29: FPRINTF("fp%s", after); break;
-        case 30: FPRINTF("la%s", after); break;
-        case 31: FPRINTF("zero%s", after); break;
-    }
+    if(reg > favor_reg_table_size) return;
+
+    FPRINTF("%s%s", favor_reg_table[reg].name, after);
 }
 
 static int32_t
@@ -216,7 +185,7 @@ print_insn_favor(bfd_vma addr, struct disassemble_info *dis_info) {
         case POP_LD_IMM: {
             // Probably we want op to just be a psuedoop, so we keep it like this?
             const char *opname = LOOKUP_OPCODE(ld_imm, insn.ld_imm.funct);
-            if(!opname) goto bad_op;
+            if(!opname) { FPRINTF("(ldimm) "); goto bad_op; }
 
             pr_opname(info, opname);
             pr_cond(info, insn.ld_imm.conditional);

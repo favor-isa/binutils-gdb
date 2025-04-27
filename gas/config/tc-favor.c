@@ -351,7 +351,7 @@ md_assemble(char *str) {
             case OP_LOAD: {
                 PARSE_TY();
                 PARSE_CONDITIONAL();
-                if(!ty.f && !ty.u) { as_bad("Use an unsigned load instead"); return; }
+                //if(!ty.f && !ty.u) { as_bad("Use an unsigned load instead"); return; }
 
                 input_line_pointer = str;
                 if(!parse_reg_into(&str, &dst, false, ty.f)) {
@@ -362,6 +362,8 @@ md_assemble(char *str) {
                     as_bad("Expected comma after destination."); return;
                 }
                 str++;
+
+                printf("got reg: %u\n", dst);
 
                 // Now there are a few options.
                 // 1. We have a `[reg1 + reg2 + const]` expression.
@@ -387,17 +389,20 @@ md_assemble(char *str) {
                 //     printf("num: %ld\n", exp.X_add_number);
                 // }
 
+                 // This will be replaced by md_convert_frag. We need to provide
+                // it with the correct starting info though.
+                insn = mk_ld_imm(conditional, dst, 0, ty.f, ty.u ? LDI0U : LDI0S);
+                output(where, favor_encode(insn));
+                //s
                 //insn = mk_ld_imm(conditional, dst, 0, ty.f, ty.vec, LS_IMM_LD64);
                 end_frag_with_exp(&exp,
                     12,
                     0,
                     RELAX_LD);
 
-                // This will be replaced by md_convert_frag. We need to provide
-                // it with the correct starting info though.
-                insn = mk_ld_imm(conditional, dst, 0, ty.f, ty.u ? LDI0U : LDI0S);
+               
 
-                break;
+                return;
             }
         }
         output(where, favor_encode(insn));
@@ -447,7 +452,10 @@ md_convert_frag (bfd *abfd ATTRIBUTE_UNUSED, segT asec ATTRIBUTE_UNUSED,
     printf("convert frag: sym value = %lu\n", final_value);
     printf("fragp->fr_fix = %ld\n", fragp->fr_fix);
     printf("fragp->fr_var = %ld\n", fragp->fr_var);
-
+    printf("insn.dst = %u\n", insn.ld_imm.dest);
+    printf("insn.funct = %u\n", insn.ld_imm.funct);
+    printf("encoded = %x\n", read_code(fragp->fr_literal + fragp->fr_fix - 4));
+    
     exp.X_add_number = fragp->fr_offset;
     exp.X_add_symbol = fragp->fr_symbol;
     exp.X_op = (exp.X_add_symbol ? O_symbol : O_constant);
@@ -555,7 +563,7 @@ md_apply_fix(fixS *fixP ATTRIBUTE_UNUSED, valueT *valP ATTRIBUTE_UNUSED, segT se
         // TODO: CUstom relocation
         uint32_t insn = get(buf);
         insn |= (uint32_t)((val >> shift) & 0xFFFF) << 10;
-        output(buf, insn);
+        //output(buf, insn);
         if(fixP->fx_addsy == NULL) {
             // Done with fixes that have no symbol, as they're always
             // PC-relative..?

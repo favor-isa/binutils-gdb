@@ -342,12 +342,15 @@ enum float2 {
 enum ld_imm {
     LDI3U,
     LDI3O,
+
     LDI2S,
     LDI2U,
     LDI2O,
+
     LDI1S,
     LDI1U,
     LDI1O,
+    
     LDI0S,
     LDI0U,
     LDI0O,
@@ -360,22 +363,22 @@ enum gpr {
     REG_A1,
     REG_A2,
     REG_A3,
+
     REG_A4,
     REG_A5,
     REG_A6,
     REG_A7,
-    REG_V0,
-    REG_V1,
-    REG_V2,
-    REG_V3,
-    REG_V4,
-    REG_V5,
-    REG_V6,
-    REG_V7,
+
+    REG_A8,
+    REG_A9,
+    REG_A10,
+    REG_A11,
+
     REG_T0,
     REG_T1,
     REG_T2,
     REG_T3,
+
     REG_T4,
     REG_T5,
     REG_T6,
@@ -386,9 +389,14 @@ enum gpr {
     REG_T10,
     REG_T11,
 
-    REG_SP,
+    REG_R0,
+    REG_R1,
+    REG_R2,
+    REG_R3,
+
     REG_FP,
     REG_LA,
+    REG_SP,
     REG_ZERO
 };
 
@@ -559,7 +567,7 @@ static inline
 struct insn
 mk_ld_imm(uint32_t conditional, uint32_t dest, uint32_t imm, uint32_t fp, uint32_t funct) {
     struct insn result = {0};
-    result.p_opcode = OP_LS_SPECIAL;
+    result.p_opcode = POP_LD_IMM;
     result.ld_imm.conditional = conditional;
     result.ld_imm.dest = dest;
     result.ld_imm.fp = fp;
@@ -639,13 +647,20 @@ favor_encode(struct insn insn) {
     return value;
 }
 
+// TODO: Consider moving these functinos into opc.c as
+// the build system does not seem to like header files.
 static inline
 struct insn
 favor_decode(uint32_t code) {
     struct insn insn;
 
+    
+
     // Do bitfields automatically get masked out? Convenient if true.
-    insn.p_opcode = code;
+
+    // NOTE: We must manually mask out p_opcode as we start with the real opcode,
+    // which is not the bit field width.
+    insn.p_opcode = code & 0xF;
 
     switch(insn.p_opcode) {
         case OP_CC_MISC:
@@ -697,7 +712,7 @@ favor_decode(uint32_t code) {
         }
         case OP_LS_SPECIAL: {
             // TODO: Figure out better way to decode this nonsense..?
-            if(code >> 29 <= 7) {
+            if((code >> 28) <= 13) {
                 // Immediate things?
                 insn.p_opcode = POP_LD_IMM;
                 insn.ld_imm.conditional = code >> 4;

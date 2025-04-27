@@ -336,8 +336,8 @@ sim_engine_run (SIM_DESC sd,
                     case CCM_SYSCALL:
                         TRACE_INSN(scpu, "%p: syscall", pc_addr);
                         /* TODO: Truncate the values in a well-defined way. */
-                        cpu->gpr[REG_V0] = sim_syscall(scpu,
-                            (int)cpu->gpr[REG_V0],
+                        cpu->gpr[REG_A0] = sim_syscall(scpu,
+                            (int)cpu->gpr[REG_A11],
                             (long)cpu->gpr[REG_A0],
                             (long)cpu->gpr[REG_A1],
                             (long)cpu->gpr[REG_A2],
@@ -518,7 +518,6 @@ sim_create_inferior (SIM_DESC sd, struct bfd *prog_bfd,
 {
   sim_cpu *scpu = STATE_CPU (sd, 0); /* FIXME */
   struct favor_sim_cpu *cpu = scpu->arch_data;
-  char test_syscall[13] = "hello world\n";
 
   (void)sd;
   (void)prog_bfd;
@@ -535,23 +534,6 @@ sim_create_inferior (SIM_DESC sd, struct bfd *prog_bfd,
   }
 
   /* Test setup for syscall. */
-  
-  sim_core_write_buffer(sd, scpu, write_map, test_syscall, 0x5000, 13);
-
-  cpu->gpr[REG_V0] = CB_SYS_write;
-  cpu->gpr[REG_A0] = 1; /* STDOUT_FILENO */
-  cpu->gpr[REG_A1] = 0x5000; /* buffer */
-  //cpu->gpr[REG_A2] = 12;     /* length */
-
-  cpu->gpr[REG_A5] = 3; // for demo, we can tyr creating a2 by doing (a5 << a6) + a7
-  cpu->gpr[REG_A6] = 1;
-  cpu->gpr[REG_A7] = 6;
-    
-  //  cpu.asregs.regs[PC_REGNO] = bfd_get_start_address (prog_bfd);
-
-      /* Store the string.  */
-      //sim_core_write_buffer (sd, scpu, write_map, argv[i],
-	//		     tp, strlen(argv[i])+1);
 
   return SIM_RC_OK;
 }
