@@ -182,42 +182,74 @@ favor_decode(uint32_t code) {
     // NOTE: We must manually mask out p_opcode as we start with the real opcode,
     // which is not the bit field width.
     insn.p_opcode = code & 0xF;
+    uint32_t variant = (code >> 4) & 1;
 
     switch(insn.p_opcode) {
-        case OP_CC_MISC:
-            insn.cc_misc.conditional = code >> 4;
-            insn.cc_misc.dest        = code >> 5;
-            insn.cc_misc.shift       = code >> 10;
-            insn.cc_misc.is_return   = code >> 16;
-            insn.cc_misc.vec         = code >> 17;
-            insn.cc_misc.funct       = code >> 19;
-            break;
-        case OP_JUMP:
-            insn.jump.funct     = code >> 4 ;
-            insn.jump.and_link  = code >> 9 ;
-            insn.jump.immediate = code >> 10;
-            break;
-        case OP_INT3:
-            insn.int3.conditional = code >> 4 ;
-            insn.int3.dest        = code >> 5 ;
-            insn.int3.src1        = code >> 10;
-            insn.int3.src2        = code >> 15;
-            insn.int3.sz          = code >> 20;
-            insn.int3.vec         = code >> 22;
-            insn.int3.funct       = code >> 24;
-            break;
-        case OP_INT2: {
-            uint32_t funct = insn.int2.funct;
-            insn.int2.conditional = code >> 4;
-            insn.int2.dest        = code >> 5;
-            insn.int2.src1        = code >> 10;
-            funct                |= (code >> 15) & 0x1F;
-            funct <<= 5;
-            insn.int2.sz          = code >> 20;
-            insn.int2.vec         = code >> 22;
-            funct                |= code >> 24;
+        case OP_MISC: {
+            uint32_t funct =
+                 ((code >>  5) & 0x01)       |
+                (((code >> 12) & 0x1F) << 1);
+            if(funct == 0) {
+                /* Singleton -- funct == 0 */
+                insn.singleton.is_return   = code >> 4;
+                insn.singleton.conditional = code >> 6;
+                insn.singleton.funct =
+                    (code >>  7) & 0x1F |
+                    ((code >> 17) << 5);
+            }
+            else {
+                /* Non-singleton */
+                insn.misc.is_return   = code >> 4 ;
+                insn.misc.conditional = code >> 6 ;
+                insn.misc.dest        = code >> 7 ;
+                insn.misc.arg_r       = code >> 17;
+                insn.misc.arg_a       = code >> 23;
+                insn.misc.vec         = code >> 30;
+                insn.misc.funct       = funct;
+            }
             break;
         }
+        case OP_JUMP:
+            insn.jump.funct     = ((code >> 5) & 1) | (((code >> 28) & 0xF) << 1);
+            insn.jump.and_link  = code >> 4;
+            insn.jump.immediate = code >> 6;
+            break;
+        case OP_INT: {
+            if(code & 0x001000000) {
+                uint32_t bigfunct = ((code >> 15) & 0x1F) | (((code >> 22) & 0x2F) << 5);
+                if((code & 0x0F000000 == 0x0F000000)) {
+                    // Swizzle instruction.
+                }
+                else if(bigfunct >> 6 == 0x1C) {
+                    // 2-arg integer instruction.
+                    insn.p_opcode = POP_I2;
+                    insn.int2.conditional = code >> 4;
+                    insn.int2.dest        = code >> 5;
+                    insn.int2.src2        = code >> 10;
+                    insn.int2.replication = code >> 
+                    insn.int2.sz          = code >> 28;
+                    insn.int2.vec         = code >> 30;
+                    insn.int2.funct       = bigfunct;
+                }
+                else {
+                    // Fixed-point instruction.
+                }
+                
+            }
+            else {
+                uint32_t funct = 0;
+                insn.p_opcode = POP_I3;
+                insn.int3.conditional = code >> 4 ;
+                insn.int3.dest        = code >> 5 ;
+                insn.int3.src1        = code >> 10;
+                insn.int3.src2        = code >> 15;
+                insn.int3.sz          = code >> 20;
+                insn.int3.vec         = code >> 22;
+                insn.int3.funct       = code >> 24;
+                break;
+            }
+        }
+
         case OP_LOAD:
         case OP_STORE: {
             insn.ls.conditional = code >> 4 ;

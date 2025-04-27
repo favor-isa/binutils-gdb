@@ -5,130 +5,6 @@
 
 #include <stdint.h>
 
-/* New(er) instruction type ideas:
- * - 0 argument (halt, nop, unconditional jump, conditional jump)
- * - 1 argument (add immediate (?), rotate (?))
- *     - these might be needed due to bit availability constraints. a += 3,
- *       cause we can't easily do a = b + 3.
- * - 2 argument (swizzle, compute length, negate, invert) 
- *     - these often correspond to unary operations.  a = -b
- * - 3 argument (add a, b, c) 
- *     - these often correspond to binary operations. a = x + y
- * To distinguish between these we need at least 2 bits. But, we can also do
- * rle nonsense if we like.
- * That said it seems like just dedicating 2 bits to this might be best.
- * 
- * size field:
- * - 1 byte signed
- * - 2 byte signed
- * - 4 byte signed
- * - 8 byte signed
- * - 1 byte unsigned
- * - 2 byte unsigned
- * - 4 byte unsigned
- * - 8 byte unsigned
- * - 4 byte float
- * - 8 byte float
- * 12 options... need 4 bits. So we could also just do [F][U][SZ]
- * 
- * Fun idea for C flag:
- * So we want some kind of condition code flag that is used for the C instructions.
- * But we really should have this flag equal to one of the specific condition
- * codes in most cases. For example, we could say it's equal to the nonzero flag
- * or maybe to the greater-than flag or something.
- * 
- * That way, when you have, say, a loop, you can encode the continue condition
- * as a 00 unconditional jump with the C flag set (so it's really a conditional
- * jump), and then the additional condition codes don't have to be checked?
- * 
- * Hmm. That might not actually be that useful. In fact, we would probably prefer
- * the C flag to ONLY be set explicitly. That way, when we want conditional execution,
- * we can do something like put multiple C instructions in a row, and then either
- * execute ALL of them or NONE of them.
- * 
- * Maybe ALL instructions are conditional?
- * [C: 1] [I_TYPE: 2]
- * X00: 0 argument:
- *    ~16 different instructions? 4 bits for instruction type. 
- *    0000: singleton instructions. Other 25 bits choose the instruction. 
- *        - halt
- *        - nop
- *        - syscall
- *        - return
- *        - return_if_null
- *    0001: unconditional jump relative to pc.
- *    0010: unconditional jump-and-link relative to pc.
- * X01: 1 argument
- *    VV: vec
- *      ZZ: size
- *        AAAAA: The register
- *             CCCC: The instruction
- *                 iiii iiii iiii iiii: immediate value
- * 1-op instructions we want:
- * - load immediate
- * - load upper immediate
- * - load upper upper immediate
- * - load upper upper upper immediate
- * - add with immediate
- * - sub with immediate
- * - 
- *             
- * X10: 2 argument
- *    VV: vec
- *      ZZ: size
- *        AAAAA: Dest
- *             BBBBB: Src
- *                  IIIII IIIII IIIII: Instruction
- * 2-op instructions we want:
- * - multiply
- * - divide
- * - normalize
- * - length
- * - dot product?
- * - cross product?
- * - comparison? 
- * - swizzle
- * - format conversion
- * - bitwise not
- * - bitwise shifts
- * - negate
- * - logical not?
- * 
- *
- * X11: 3 argument
- *    VV: vec
- *      ZZ: size
- *        AAAAA: dest
- *             BBBBB: src1
- *                  CCCCC: src2
- *                       IIIII IIIII: Instruction (1024 options?)
- * 3-op instructions we want:
- * - add
- * - sub
- * - min (note: needs float/signed/unsigned disctinction)
- * - max
- * - min-of-components
- * - max-of-components
- * - bitwise and
- * - bitwise or
- * - // this shuld be two arg: bitwise not
- * - logical and?
- * - logical or?
- * - load/store:
- *   - many flags.
- *   - ld a0, [a1 + 4 * a2 + 4]
- *   - so we have:
- *     - multiply value for second arg (?)
- *     - constant offset val
- *     - some masking operations:
- *       - is the src1 pointer masked?
- *       - is the src2 offset masked?
- *       - the expression result is always masked (no unaligned load/stores)
- *     - is the load/store atomic? (?)
- */
-
-
-
 struct favor_op_info {
     const char *name;
 
@@ -179,13 +55,10 @@ extern size_t favor_reg_table_size;
 
 /* Instruction kind: 0 arg, 1 arg, 2 arg, 3 arg */
 enum opcode {
-    OP_CC_MISC,
+    OP_MISC,
     OP_JUMP,
-    OP_INT3,
-    OP_INT2,
-    OP_FLOAT3,
-    OP_FLOAT2,
-    OP_FIX2,
+    OP_INT,
+    OP_FLOAT,
     OP_LOAD,
     OP_STORE,
     OP_LS_SPECIAL,
@@ -195,6 +68,26 @@ enum opcode {
      * Instead, they indicate sub-types of the struct insn to make working
      * with various opcodes easier, such as ld_imm opcodes. */
     POP_START = 16,
+
+    POP_SINGLETON,
+    
+    /* Three-arg, two-arg integer instructions */
+    POP_I3,
+    POP_I2,
+
+    /* Fixed-point instruction */
+    POP_FIX2,
+
+    /* Swizzle instruction */
+    POP_SWIZZLE,
+
+    /* Three-arg, two-arg floating point instructions */
+    POP_F3,
+    POP_F2,
+
+    
+    
+
     POP_LD_IMM,
 };
 
@@ -203,7 +96,7 @@ enum opcode {
  * help narrow down certain things.
  */
 enum opcode_flag {
-    OP_CC_MISC_SINGLETON = 0x100 | OP_CC_MISC,
+    OP_CC_MISC_SINGLETON = 0x100 | OP_MISC,
     OP_INT_FLOAT_3 = 0x200,
 };
 
@@ -418,108 +311,156 @@ struct insn {
      * 
      * In practice, this field is the discriminant of the union.
      */
-    uint32_t p_opcode : 6;
+    uint32_t p_opcode;
 
     union {
         struct {
+            uint32_t is_return : 1;
             uint32_t conditional : 1;
             uint32_t dest : 5;
-            uint32_t shift : 6;
-            uint32_t is_return : 1;
+            /* non-zero */
+            uint32_t funct : 6;
+            uint32_t arg_r : 6;
+            uint32_t arg_a : 7;
             uint32_t vec : 2;
-            uint32_t funct : 13;
-        } cc_misc;
+        } misc;
 
         struct {
-            uint32_t funct : 5;
+            uint32_t is_return : 1;
+            uint32_t conditional : 1;
+            uint32_t funct : 20;
+        } singleton;
+
+        struct {
             uint32_t and_link : 1;
+            uint32_t funct : 5;
             uint32_t immediate : 22;
         } jump;
 
         struct {
+            uint32_t replication : 1;
             uint32_t conditional : 1;
             uint32_t dest : 5;
-            uint32_t src1 : 5;
             uint32_t src2 : 5;
+            uint32_t src1 : 5;
+            uint32_t funct : 6; 
             uint32_t sz : 2;
             uint32_t vec : 2;
-            uint32_t funct : 8; 
         } int3;
 
         struct {
+            uint32_t replication : 1;
             uint32_t conditional : 1;
             uint32_t dest : 5;
-            uint32_t src1 : 5;
+            uint32_t src2 : 5;
+            uint32_t funct : 6; 
             uint32_t sz : 2;
             uint32_t vec : 2;
-            uint32_t funct : 13;
         } int2;
 
         struct {
-            uint32_t conditional: 1;
-            uint32_t dest: 5;
-            uint32_t sz: 2;
-            uint32_t funct: 4;
-            uint32_t imm: 16;
-        } int_imm;
-
-        struct {
+            uint32_t replication : 1;
             uint32_t conditional : 1;
             uint32_t dest : 5;
-            uint32_t src1 : 5;
             uint32_t src2 : 5;
-            uint32_t sz : 1;
-            uint32_t vec : 2;
-            uint32_t funct : 9; 
-        } float3;
-
-        struct {
-            uint32_t conditional : 1;
-            uint32_t dest : 5;
-            uint32_t src1 : 5;
-            uint32_t sz : 1;
-            uint32_t vec : 2;
-            uint32_t funct : 14;
-        } float2;
-
-        struct {
-            uint32_t conditional : 1;
-            uint32_t dest : 5;
-            uint32_t src1 : 5;
+            uint32_t shift : 6;
+            uint32_t funct : 5; 
             uint32_t sz : 2;
             uint32_t vec : 2;
-            uint32_t funct : 13;
         } fix2;
 
         struct {
             uint32_t conditional : 1;
             uint32_t dest : 5;
             uint32_t src1 : 5;
-            uint32_t src2 : 5;
+            uint32_t a : 2;
+            uint32_t b : 2;
+            uint32_t c : 2;
+            uint32_t d : 2;
+            /** NOTE: For FP, this is either 0 or 1. */
             uint32_t sz : 2;
-            uint32_t vec : 2;
-            uint32_t fp : 1;
-            uint32_t offset : 5;
-            uint32_t shift : 2;
-        } ls; /* load-store */
 
-        /* struct {
-            uint32_t conditional : 1;
-            uint32_t dest : 5;
-            uint32_t src1 : 5;
             uint32_t vec : 2;
-            uint32_t fp : 1;
-            uint32_t etc : 14;
-        } ls_special; */ /* COME BACK TO THIS */
+        } swizzle;
 
         struct {
+            uint32_t replication : 1;
             uint32_t conditional : 1;
             uint32_t dest : 5;
-            uint32_t imm: 16;
+            uint32_t src2 : 5;
+            uint32_t src1 : 5;
+            uint32_t funct : 7; 
+            uint32_t sz : 2;
+            uint32_t vec : 2;
+        } float3;
+
+        struct {
+            uint32_t replication : 1;
+            uint32_t conditional : 1;
+            uint32_t dest : 5;
+            uint32_t src2 : 5;
+            uint32_t funct : 12; 
+            uint32_t sz : 2;
+            uint32_t vec : 2;
+        } float2;
+
+        struct {
             uint32_t fp : 1;
-            uint32_t unused : 1;
+            uint32_t conditional : 1;
+            uint32_t dest : 5;
+            uint32_t src2 : 5;
+            uint32_t src1 : 5;
+            uint32_t shift : 3;
+            uint32_t offset : 3;
+            uint32_t sz : 2;
+            uint32_t vec : 2;
+        } ls; /* load-store */
+
+        struct {
+            uint32_t fp : 1;
+            uint32_t conditional : 1;
+            uint32_t dest : 5;
+            uint32_t src2 : 5;
+            uint32_t offset : 11;
+            uint32_t sz : 2;
+            uint32_t vec : 2;
+        } ls_long;
+
+        struct {
+            uint32_t fp : 1;
+            uint32_t conditional : 1;
+            uint32_t dest : 5;
+            uint32_t imm : 16;
             uint32_t funct: 4;
         } ld_imm;
+
+        struct {
+            uint32_t fp : 1;
+            uint32_t conditional : 1;
+            uint32_t dest : 5;
+            uint32_t funct : 4;
+            uint32_t imm : 12;
+            uint32_t sz : 2;
+            uint32_t vec : 2;
+        } ls_special;
+
+        struct {
+            uint32_t funct : 1;
+            uint32_t conditional : 1;
+            uint32_t dest : 5;
+            uint32_t imm : 16;
+            uint32_t sz : 2;
+            uint32_t vec : 2;
+        } int_imm_addsub;
+
+        struct {
+            uint32_t funct : 5;
+            uint32_t conditional : 1;
+            uint32_t dest : 5;
+            uint32_t imm : 12;
+            uint32_t sz : 2;
+            uint32_t vec : 2;
+        } int_imm;
     };
 };
 
@@ -527,9 +468,9 @@ static inline
 struct insn
 mk_basic_cc_misc(uint32_t conditional, uint32_t funct) {
     struct insn result = {0};
-    result.p_opcode = OP_CC_MISC;
-    result.cc_misc.conditional = conditional;
-    result.cc_misc.funct = funct;
+    result.p_opcode = OP_MISC;
+    result.misc.conditional = conditional;
+    result.misc.funct = funct;
     return result;
 }
 
@@ -537,7 +478,7 @@ static inline
 struct insn
 mk_int3(uint32_t conditional, uint32_t dest, uint32_t src1, uint32_t src2, uint32_t sz, uint32_t vec, uint32_t funct) {
     struct insn result = {0};
-    result.p_opcode = OP_INT3;
+    result.p_opcode = POP_I3;
     result.int3.conditional = conditional;
     result.int3.dest = dest;
     result.int3.src1 = src1;
@@ -552,7 +493,7 @@ static inline
 struct insn
 mk_float3(uint32_t conditional, uint32_t dest, uint32_t src1, uint32_t src2, uint32_t sz, uint32_t vec, uint32_t funct) {
     struct insn result = {0};
-    result.p_opcode = OP_FLOAT3;
+    result.p_opcode = POP_F3;
     result.float3.conditional = conditional;
     result.float3.dest = dest;
     result.float3.src1 = src1;
