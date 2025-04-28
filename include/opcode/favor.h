@@ -142,7 +142,8 @@ enum condition {
 };
 
 enum cc_misc {
-    CCM_ILL = 0,
+    CCM_SINGLETON = 0,
+    CCM_ILL,
     CCM_NOP,
     CCM_HALT,
     CCM_SYSCALL,
