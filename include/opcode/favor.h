@@ -90,6 +90,8 @@ enum opcode {
     POP_STORE_LONG,
     
     POP_LD_IMM,
+
+    POP_INT_IMM_ADDSUB,
 };
 
 /**

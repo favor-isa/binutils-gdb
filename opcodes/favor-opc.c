@@ -326,7 +326,27 @@ favor_decode(uint32_t code) {
         }
 
         case OP_INT_IMM: {
-            // TODO
+            if(!variant) {
+                // Variant 0: general immediate ops
+                insn.int_imm.conditional = code >> 6 ;
+                insn.int_imm.dest        = code >> 7 ;
+                insn.int_imm.funct       = 
+                     ((code >> 5) & 1) |
+                    (((code >> 12) & 0xF) << 1);
+                insn.int_imm.imm         = code >> 16;
+                insn.int_imm.sz          = code >> 28;
+                insn.int_imm.vec         = code >> 30;
+            }
+            else {
+                // Variant 1: add/sub immediate ops
+                insn.p_opcode = POP_INT_IMM_ADDSUB;
+                insn.int_imm_addsub.funct       = code >> 5 ;
+                insn.int_imm_addsub.conditional = code >> 6 ;
+                insn.int_imm_addsub.dest        = code >> 7 ;
+                insn.int_imm_addsub.imm         = code >> 12;
+                insn.int_imm_addsub.sz          = code >> 28;
+                insn.int_imm_addsub.vec         = code >> 30;
+            }
             break;
         }
     }
