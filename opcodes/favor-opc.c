@@ -113,9 +113,24 @@ favor_encode(struct insn insn) {
 
     switch(insn.p_opcode) {
         case POP_SINGLETON: {
+            value |= OP_MISC;
+            value |= insn.singleton.is_return   << 4;
+            value |= insn.singleton.conditional << 6;
+            value |= (insn.singleton.funct & 0x1F) << 7;
+            value |= (insn.singleton.funct >> 5)   << 17;
+            // Note that the misc funct field is 0, but that's already done.
             break;
         }
         case OP_MISC: {
+            value |= insn.misc.is_return   << 4 ;
+            value |= insn.misc.conditional << 6 ;
+            value |= insn.misc.dest        << 7 ;
+            value |= insn.misc.arg_r       << 17;
+            value |= insn.misc.arg_a       << 23;
+            value |= insn.misc.vec         << 30;
+
+            value |= (insn.misc.funct & 1)  << 5;
+            value |= (insn.misc.funct >> 1) << 12;
             break;
         }
         case OP_JUMP: {
