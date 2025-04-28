@@ -215,45 +215,66 @@ favor_decode(uint32_t code) {
             insn.jump.immediate = code >> 6;
             break;
         case OP_INT: {
-            if(code & 0x001000000) {
-                uint32_t bigfunct = ((code >> 15) & 0x1F) | (((code >> 22) & 0x2F) << 5);
-                if((code & 0x0F000000 == 0x0F000000)) {
+            // Variant instructions are either swizzle, 2-arg int, or 2-arg fix.
+            if(variant) {
+                uint32_t bigfunct = (code >> 17) & 0x5FF;
+                if((bigfunct >> 7) == 0xF) {
                     // Swizzle instruction.
+                    insn.p_opcode = POP_SWIZZLE;
+                    insn.swizzle.conditional = code >> 6 ;
+                    insn.swizzle.dest        = code >> 7 ;
+                    insn.swizzle.src2        = code >> 12;
+                    insn.swizzle.a           = ((code >> 5) & 1) | (((code >> 17) & 1) << 1);
+                    insn.swizzle.b           = code >> 18;
+                    insn.swizzle.c           = code >> 20;
+                    insn.swizzle.d           = code >> 22;
+                    insn.swizzle.sz          = code >> 28;
+                    insn.swizzle.vec         = code >> 30;
                 }
-                else if(bigfunct >> 6 == 0x1C) {
+                else if((bigfunct >> 6) == 0x1D) {
                     // 2-arg integer instruction.
                     insn.p_opcode = POP_I2;
-                    insn.int2.conditional = code >> 4;
-                    insn.int2.dest        = code >> 5;
-                    insn.int2.src2        = code >> 10;
-                    insn.int2.replication = code >> 
+                    insn.int2.replication = code >> 5 ;
+                    insn.int2.conditional = code >> 6 ;
+                    insn.int2.dest        = code >> 7 ;
+                    insn.int2.src2        = code >> 12;
+                    insn.int2.funct       = bigfunct;
                     insn.int2.sz          = code >> 28;
                     insn.int2.vec         = code >> 30;
-                    insn.int2.funct       = bigfunct;
                 }
                 else {
                     // Fixed-point instruction.
+                    insn.p_opcode = POP_FIX2;
+                    insn.fix2.replication = code >> 5 ;
+                    insn.fix2.conditional = code >> 6 ;
+                    insn.fix2.dest        = code >> 7 ;
+                    insn.fix2.src2        = code >> 12;
+                    insn.fix2.shift       = code >> 17;
+                    insn.fix2.funct       = bigfunct >> 6;
+                    insn.fix2.sz          = code >> 28;
+                    insn.fix2.vec         = code >> 30;
                 }
-                
             }
             else {
-                uint32_t funct = 0;
-                insn.p_opcode = POP_I3;
-                insn.int3.conditional = code >> 4 ;
-                insn.int3.dest        = code >> 5 ;
-                insn.int3.src1        = code >> 10;
-                insn.int3.src2        = code >> 15;
-                insn.int3.sz          = code >> 20;
-                insn.int3.vec         = code >> 22;
-                insn.int3.funct       = code >> 24;
-                break;
+                insn.int3.replication = code >> 5 ;
+                insn.int3.conditional = code >> 6 ;
+                insn.int3.dest        = code >> 7 ;
+                insn.int3.src2        = code >> 12;
+                insn.int3.src1        = code >> 17;
+                insn.int3.funct       = code >> 22;
+                insn.int3.sz          = code >> 28;
+                insn.int3.vec         = code >> 30;
             }
+            break;
         }
 
         case OP_LOAD:
         case OP_STORE: {
-            insn.ls.conditional = code >> 4 ;
-            insn.ls.dest        = code >> 5 ;
+
+            insn.ls.
+            
+            insn.ls.conditional = code >> 6 ;
+            insn.ls.dest        = code >> 7 ;
             insn.ls.src1        = code >> 10;
             insn.ls.src2        = code >> 15;
             insn.ls.sz          = code >> 20;

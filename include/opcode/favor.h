@@ -372,7 +372,7 @@ struct insn {
         struct {
             uint32_t conditional : 1;
             uint32_t dest : 5;
-            uint32_t src1 : 5;
+            uint32_t src2 : 5;
             uint32_t a : 2;
             uint32_t b : 2;
             uint32_t c : 2;
