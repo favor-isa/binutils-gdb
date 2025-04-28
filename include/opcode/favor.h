@@ -91,7 +91,8 @@ enum opcode {
     POP_FIX2,
 
     /* Swizzle instructions. Corresponds to .swizzle */
-    POP_SWIZZLE,
+    POP_INT_SWIZZLE,
+    POP_FLOAT_SWIZZLE,
 
     /* Three-arg, two-arg floating point instructions */
     /* Corresponds to .float3 */

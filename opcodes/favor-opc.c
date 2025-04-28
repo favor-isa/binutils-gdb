@@ -1,6 +1,8 @@
 #include "sysdep.h"
 #include "opcode/favor.h"
 
+#include <assert.h>
+
 #define UF(uv, fv)      .funct_u = uv, .funct_s = -1, .funct_f = fv, .funct_x = -1
 #define U(uv)           .funct_u = uv, .funct_s = -1, .funct_f = -1, .funct_x = -1
 #define US(uv, sv)      .funct_u = uv, .funct_s = sv, .funct_f = -1, .funct_x = -1
@@ -103,6 +105,11 @@ struct favor_reg_info favor_reg_table[] = {
 };
 size_t favor_reg_table_size = sizeof(favor_reg_table) / sizeof(*favor_reg_table);
 
+enum {
+    VARIANT_0 = 0,
+    VARIANT_1 = 0x10
+};
+
 uint32_t
 favor_encode(struct insn insn) {
     uint32_t value = 0;
@@ -142,21 +149,70 @@ favor_encode(struct insn insn) {
             break;
         }
         case POP_I3: {
+            value |= OP_INT;
+            value |= VARIANT_0;
+            value |= insn.int3.replication << 5 ;
+            value |= insn.int3.conditional << 6 ;
+            value |= insn.int3.dest        << 7 ;
+            value |= insn.int3.src2        << 12;
+            value |= insn.int3.src1        << 17;
+            value |= insn.int3.funct       << 22;
+            value |= insn.int3.sz          << 28;
+            value |= insn.int3.vec         << 30;
             break;
         }
         case POP_I2: {
+            value |= OP_INT;
+            value |= VARIANT_1;
+            value |= insn.int2.replication << 5 ;
+            value |= insn.int2.conditional << 6 ;
+            value |= insn.int2.dest        << 7 ;
+            value |= insn.int2.src2        << 12;
+            value |= insn.int2.funct       << 17;
+            value |= 0x1D                  << 23;
+            value |= insn.int2.sz          << 28;
+            value |= insn.int2.vec         << 30;
             break;
         }
         case POP_FIX2: {
+            value |= OP_INT;
+            value |= VARIANT_1;
+            value |= insn.fix2.replication << 5 ;
+            value |= insn.fix2.conditional << 6 ;
+            value |= insn.fix2.dest        << 7 ;
+            value |= insn.fix2.src2        << 12;
+            value |= insn.fix2.shift       << 17;
+            value |= insn.fix2.funct       << 23;
+            assert(insn.fix2.funct < 0x1D);
+            value |= insn.fix2.sz          << 28;
+            value |= insn.fix2.vec         << 30;
             break;
         }
-        case POP_SWIZZLE: {
+        case POP_INT_SWIZZLE: {
+            value |= OP_INT;
+            value |= VARIANT_1;
+            value |= insn.swizzle.conditional << 6 ;
+            value |= insn.swizzle.dest        << 7 ;
+            value |= insn.swizzle.src2        << 12;
+
+            value |= (insn.swizzle.a & 1)  << 5;
+            value |= (insn.swizzle.a >> 1) << 17;
+
+            value |= insn.swizzle.b           << 18;
+            value |= insn.swizzle.c           << 20;
+            value |= insn.swizzle.d           << 22;
+            value |= 0xF                      << 24;
+            value |= insn.swizzle.sz          << 28;
+            value |= insn.swizzle.vec         << 30;
             break;
         }
         case POP_F3: {
             break;
         }
         case POP_F2: {
+            break;
+        }
+        case POP_FLOAT_SWIZZLE: {
             break;
         }
         case OP_LOAD:
@@ -232,7 +288,7 @@ favor_decode(uint32_t code) {
                 uint32_t bigfunct = (code >> 17) & 0x5FF;
                 if((bigfunct >> 7) == 0xF) {
                     // Swizzle instruction.
-                    insn.p_opcode = POP_SWIZZLE;
+                    insn.p_opcode = POP_INT_SWIZZLE;
                     insn.swizzle.conditional = code >> 6 ;
                     insn.swizzle.dest        = code >> 7 ;
                     insn.swizzle.src2        = code >> 12;
