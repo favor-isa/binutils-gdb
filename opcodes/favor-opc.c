@@ -134,6 +134,11 @@ favor_encode(struct insn insn) {
             break;
         }
         case OP_JUMP: {
+            value |= insn.jump.and_link  << 4;
+            value |= insn.jump.immediate << 6;
+
+            value |= (insn.jump.funct & 1)  << 5;
+            value |= (insn.jump.funct >> 1) << 28;
             break;
         }
         case POP_I3: {
