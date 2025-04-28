@@ -270,18 +270,31 @@ favor_decode(uint32_t code) {
 
         case OP_LOAD:
         case OP_STORE: {
+            if(!variant) {
+                // Variant 0: has src1 arg & shorter offset
+                insn.ls.fp          = code >> 5 ;
+                insn.ls.conditional = code >> 6 ;
+                insn.ls.dest        = code >> 7 ;
+                insn.ls.src2        = code >> 12;
+                insn.ls.src1        = code >> 17;
+                insn.ls.shift       = code >> 22;
+                insn.ls.offset      = code >> 25;
+                insn.ls.sz          = code >> 28;
+                insn.ls.vec         = code >> 30;
+            }
+            else {
+                // Variant 1: has long offset
+                insn.p_opcode = (insn.p_opcode == OP_LOAD) ? POP_LOAD_LONG : POP_STORE_LONG;
 
-            insn.ls.
+                insn.ls_long.fp          = code >> 5 ;
+                insn.ls_long.conditional = code >> 6 ;
+                insn.ls_long.dest        = code >> 7 ;
+                insn.ls_long.src2        = code >> 12;
+                insn.ls_long.offset      = code >> 17;
+                insn.ls_long.sz          = code >> 28;
+                insn.ls_long.vec         = code >> 30;
+            }
             
-            insn.ls.conditional = code >> 6 ;
-            insn.ls.dest        = code >> 7 ;
-            insn.ls.src1        = code >> 10;
-            insn.ls.src2        = code >> 15;
-            insn.ls.sz          = code >> 20;
-            insn.ls.vec         = code >> 22;
-            insn.ls.fp          = code >> 24;
-            insn.ls.offset      = code >> 25;
-            insn.ls.shift       = code >> 30;
             break;
         }
         case OP_LS_SPECIAL: {

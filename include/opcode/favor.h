@@ -85,9 +85,9 @@ enum opcode {
     POP_F3,
     POP_F2,
 
+    POP_LOAD_LONG,
+    POP_STORE_LONG,
     
-    
-
     POP_LD_IMM,
 };
 
