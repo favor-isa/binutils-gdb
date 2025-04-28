@@ -27,13 +27,13 @@ favor_elf_howto_table[] = {
         4,
         22,
         true,
-        10,
+        6,
         complain_overflow_bitfield,
         bfd_elf_generic_reloc,
         "R_FAVOR_J22_PCREL",
         false,
         0x00000000,
-        0xFFFFFC00,
+        0x0FFFFFC0,
         true),
 
     HOWTO(R_FAVOR_IMM16_PCREL,
@@ -41,14 +41,14 @@ favor_elf_howto_table[] = {
         4, // 4 bytes
         64, // 64 bit relocation
         true,
-        10, // Left shift by 10. WARNING: We may need a custom relocation function
+        12, // Left shift by 10. WARNING: We may need a custom relocation function
             // if we change the thing to not be contiguous.
         complain_overflow_bitfield,
         bfd_elf_generic_reloc,
         "R_FAVOR_IMM16_PCREL",
         false,
         0x00000000,
-        0x03FFFC00,
+        0x0FFFF000,
         true),
 
     HOWTO(R_FAVOR_IMM32_PCREL,
@@ -56,14 +56,14 @@ favor_elf_howto_table[] = {
         4, // 4 bytes
         64, // 64 bit relocation
         true,
-        10, // Left shift by 10. WARNING: We may need a custom relocation function
+        12, // Left shift by 10. WARNING: We may need a custom relocation function
             // if we change the thing to not be contiguous.
         complain_overflow_bitfield,
         bfd_elf_generic_reloc,
         "R_FAVOR_IMM32_PCREL",
         false,
         0x00000000,
-        0x03FFFC00,
+        0x0FFFF000,
         true),
 
     HOWTO(R_FAVOR_IMM48_PCREL,
@@ -71,14 +71,14 @@ favor_elf_howto_table[] = {
         4, // 4 bytes
         64, // 64 bit relocation
         true,
-        10, // Left shift by 10. WARNING: We may need a custom relocation function
+        12, // Left shift by 10. WARNING: We may need a custom relocation function
             // if we change the thing to not be contiguous.
         complain_overflow_bitfield,
         bfd_elf_generic_reloc,
         "R_FAVOR_IMM48_PCREL",
         false,
         0x00000000,
-        0x03FFFC00,
+        0x0FFFF000,
         true),
 
     HOWTO(R_FAVOR_IMM64_PCREL,
@@ -86,14 +86,14 @@ favor_elf_howto_table[] = {
         4, // 4 bytes
         64, // 64 bit relocation
         true,
-        10, // Left shift by 10. WARNING: We may need a custom relocation function
+        12, // Left shift by 10. WARNING: We may need a custom relocation function
             // if we change the thing to not be contiguous.
         complain_overflow_bitfield,
         bfd_elf_generic_reloc,
         "R_FAVOR_IMM64_PCREL",
         false,
         0x00000000,
-        0x03FFFC00,
+        0x0FFFF000,
         true),
 };
 
