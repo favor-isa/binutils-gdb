@@ -243,9 +243,24 @@ favor_encode(struct insn insn) {
             break;
         }
         case OP_LS_SPECIAL: {
+            value |= VARIANT_0;
+            value |= insn.ls_special.fp          << 5 ;
+            value |= insn.ls_special.conditional << 6 ;
+            value |= insn.ls_special.dest        << 7 ;
+            value |= insn.ls_special.funct       << 12;
+            value |= insn.ls_special.imm         << 16;
+            value |= insn.ls_special.sz          << 28;
+            value |= insn.ls_special.vec         << 30;
             break;
         }
         case POP_LD_IMM: {
+            value |= OP_LS_SPECIAL;
+            value |= VARIANT_1;
+            value |= insn.ld_imm.fp          << 5 ;
+            value |= insn.ld_imm.conditional << 6 ;
+            value |= insn.ld_imm.dest        << 7 ;
+            value |= insn.ld_imm.imm         << 12;
+            value |= insn.ld_imm.funct       << 28;
             break;
         }
         case OP_INT_IMM: {
