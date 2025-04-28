@@ -382,7 +382,8 @@ sim_engine_run (SIM_DESC sd,
             }
             // TODO: Switch to psuedo-ops?
             case POP_LD_IMM: {
-              cpu->gpr[insn.ld_imm.dest] = ld_imm(insn.ld_imm.dest, insn.ld_imm.funct, insn.ld_imm.imm, cpu->pc);
+              cpu->gpr[insn.ld_imm.dest] = ld_imm(cpu->gpr[insn.ld_imm.dest], insn.ld_imm.funct, insn.ld_imm.imm, cpu->pc);
+              TRACE_ALU(scpu, "%s <- %lx", favor_reg_table[insn.ld_imm.dest].name, cpu->gpr[insn.ld_imm.dest]);
               //APPLY_VEC3_X1(insn.ld_imm, ld_imm, status1_nop, insn.ld_imm.funct, insn.ld_imm.imm, cpu->pc);
             }
             default:
