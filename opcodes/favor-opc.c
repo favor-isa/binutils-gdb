@@ -302,18 +302,25 @@ favor_decode(uint32_t code) {
             break;
         }
         case OP_LS_SPECIAL: {
-            // TODO: Figure out better way to decode this nonsense..?
-            if((code >> 28) <= 13) {
-                // Immediate things?
-                insn.p_opcode = POP_LD_IMM;
-                insn.ld_imm.conditional = code >> 4;
-                insn.ld_imm.dest        = code >> 5;
-                insn.ld_imm.imm         = code >> 10; // TODO: This needs to be rearranged
-                insn.ld_imm.fp          = code >> 26;
-                insn.ld_imm.funct       = code >> 28;
+            if(!variant) {
+                // Variant 0: Main set of extra ops
+                insn.ls_special.fp          = code >> 5 ;
+                insn.ls_special.conditional = code >> 6 ;
+                insn.ls_special.dest        = code >> 7 ;
+                insn.ls_special.funct       = code >> 12;
+                insn.ls_special.imm         = code >> 16;
+                insn.ls_special.sz          = code >> 28;
+                insn.ls_special.vec         = code >> 30;
             }
             else {
-                // TODO!!!!
+                // Variant 1: Immediate loads
+                insn.p_opcode = POP_LD_IMM;
+
+                insn.ld_imm.fp          = code >> 5 ;
+                insn.ld_imm.conditional = code >> 6 ;
+                insn.ld_imm.dest        = code >> 7 ;
+                insn.ld_imm.imm         = code >> 12;
+                insn.ld_imm.funct       = code >> 28;
             }
             break;
         }
