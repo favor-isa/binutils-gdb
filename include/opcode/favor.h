@@ -55,13 +55,21 @@ extern size_t favor_reg_table_size;
 
 /* Instruction kind: 0 arg, 1 arg, 2 arg, 3 arg */
 enum opcode {
+    /* MISC instructions. Corresponds to .misc */
     OP_MISC,
+    /* JUMP instructions. Corresponds to .jump */
     OP_JUMP,
+    /* INT instructions. All of these use POP codes. */
     OP_INT,
+    /* FLOAT instructions. All of these use POP codes. */
     OP_FLOAT,
+    /* LOAD instructions. Corresponds to .ls */
     OP_LOAD,
+    /* STORE instructions. Corresponds to .ls */
     OP_STORE,
+    /* Corresponds to .ls_special */
     OP_LS_SPECIAL,
+    /* Corresponds to .int_imm */
     OP_INT_IMM,
 
     /* Psuedo-opcodes:
@@ -70,27 +78,36 @@ enum opcode {
      * with various opcodes easier, such as ld_imm opcodes. */
     POP_START = 16,
 
+    /* Corresponds to .singleton */
     POP_SINGLETON,
     
     /* Three-arg, two-arg integer instructions */
+    /* Corresponds to .int3 */
     POP_I3,
+    /* Corresponds to .int2 */
     POP_I2,
 
-    /* Fixed-point instruction */
+    /* Fixed-point instructions. Corresponds to .fix2 */
     POP_FIX2,
 
-    /* Swizzle instruction */
+    /* Swizzle instructions. Corresponds to .swizzle */
     POP_SWIZZLE,
 
     /* Three-arg, two-arg floating point instructions */
+    /* Corresponds to .float3 */
     POP_F3,
+    /* Corresponds to .float2 */
     POP_F2,
 
+    /* Corresponds to .ls_long */
     POP_LOAD_LONG,
+    /* Corresponds to .ls_long */
     POP_STORE_LONG,
     
+    /* Corresponds to .ld_imm */
     POP_LD_IMM,
 
+    /* Corresponds to .int_imm_addsub */
     POP_INT_IMM_ADDSUB,
 };
 

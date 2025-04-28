@@ -112,60 +112,51 @@ favor_encode(struct insn insn) {
     }
 
     switch(insn.p_opcode) {
-        case OP_CC_MISC:
-            value |= (insn.cc_misc.conditional << 4);
-            value |= (insn.cc_misc.dest        << 5);
-            value |= (insn.cc_misc.shift       << 10);
-            value |= (insn.cc_misc.is_return   << 16);
-            value |= (insn.cc_misc.vec         << 17);
-            value |= (insn.cc_misc.funct       << 19);
+        case POP_SINGLETON: {
             break;
-        case OP_JUMP:
-            value |= (insn.jump.funct     << 4);
-            value |= (insn.jump.and_link  << 9);
-            value |= (insn.jump.immediate << 10);
+        }
+        case OP_MISC: {
             break;
-        case OP_INT3:
-            value |= (insn.int3.conditional << 4);
-            value |= (insn.int3.dest        << 5);
-            value |= (insn.int3.src1        << 10);
-            value |= (insn.int3.src2        << 15);
-            value |= (insn.int3.sz          << 20);
-            value |= (insn.int3.vec         << 22);
-            value |= (insn.int3.funct       << 24);
+        }
+        case OP_JUMP: {
             break;
-        case OP_INT2: {
-            uint32_t funct = insn.int2.funct;
-            value |= (insn.int2.conditional << 4);
-            value |= (insn.int2.dest        << 5);
-            value |= (insn.int2.src1        << 10);
-            value |= ((funct & 0x1F)        << 15);
-            funct >>= 5;
-            value |= (insn.int2.sz          << 20);
-            value |= (insn.int2.vec         << 22);
-            value |= (funct                 << 24);
+        }
+        case POP_I3: {
+            break;
+        }
+        case POP_I2: {
+            break;
+        }
+        case POP_FIX2: {
+            break;
+        }
+        case POP_SWIZZLE: {
+            break;
+        }
+        case POP_F3: {
+            break;
+        }
+        case POP_F2: {
             break;
         }
         case OP_LOAD:
         case OP_STORE: {
-            value |= (insn.ls.conditional << 4);
-            value |= (insn.ls.dest        << 5);
-            value |= (insn.ls.src1        << 10);
-            value |= (insn.ls.src2        << 15);
-            value |= (insn.ls.sz          << 20);
-            value |= (insn.ls.vec         << 22);
-            value |= (insn.ls.fp          << 24);
-            value |= (insn.ls.offset      << 25);
-            value |= (insn.ls.shift       << 30);
+            break;
+        }
+        case POP_LOAD_LONG:
+        case POP_STORE_LONG: {
+            break;
+        }
+        case OP_LS_SPECIAL: {
             break;
         }
         case POP_LD_IMM: {
-            value |= OP_LS_SPECIAL; // Subset of ls-special
-            value |= (insn.ld_imm.conditional << 4 );
-            value |= (insn.ld_imm.dest        << 5 );
-            value |= (insn.ld_imm.imm         << 10); // TODO: This needs to be rearranged
-            value |= (insn.ld_imm.fp          << 26);
-            value |= (insn.ld_imm.funct       << 28);
+            break;
+        }
+        case OP_INT_IMM: {
+            break;
+        }
+        case POP_INT_IMM_ADDSUB: {
             break;
         }
     }
@@ -191,6 +182,7 @@ favor_decode(uint32_t code) {
                 (((code >> 12) & 0x1F) << 1);
             if(funct == 0) {
                 /* Singleton -- funct == 0 */
+                insn.p_opcode = POP_SINGLETON;
                 insn.singleton.is_return   = code >> 4;
                 insn.singleton.conditional = code >> 6;
                 insn.singleton.funct =
