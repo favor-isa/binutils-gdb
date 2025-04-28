@@ -217,10 +217,29 @@ favor_encode(struct insn insn) {
         }
         case OP_LOAD:
         case OP_STORE: {
+            value |= VARIANT_0;
+            value |= insn.ls.fp          << 5 ;
+            value |= insn.ls.conditional << 6 ;
+            value |= insn.ls.dest        << 7 ;
+            value |= insn.ls.src2        << 12;
+            value |= insn.ls.src1        << 17;
+            value |= insn.ls.shift       << 22;
+            value |= insn.ls.offset      << 25;
+            value |= insn.ls.sz          << 28;
+            value |= insn.ls.vec         << 30;
             break;
         }
         case POP_LOAD_LONG:
         case POP_STORE_LONG: {
+            value |= (insn.p_opcode == POP_LOAD_LONG) ? OP_LOAD : OP_STORE;
+            value |= VARIANT_1;
+            value |= insn.ls_long.fp          << 5 ;
+            value |= insn.ls_long.conditional << 6 ;
+            value |= insn.ls_long.dest        << 7 ;
+            value |= insn.ls_long.src2        << 12;
+            value |= insn.ls_long.offset      << 17;
+            value |= insn.ls_long.sz          << 28;
+            value |= insn.ls_long.vec         << 30;
             break;
         }
         case OP_LS_SPECIAL: {
