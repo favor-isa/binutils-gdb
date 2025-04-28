@@ -62,6 +62,7 @@ enum opcode {
     OP_LOAD,
     OP_STORE,
     OP_LS_SPECIAL,
+    OP_INT_IMM,
 
     /* Psuedo-opcodes:
      * These do not fit in the actual 4-bit opcode field of the instruction.

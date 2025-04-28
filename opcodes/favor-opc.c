@@ -267,6 +267,10 @@ favor_decode(uint32_t code) {
             }
             break;
         }
+        case OP_FLOAT: {
+            // TODO
+            break;
+        }
 
         case OP_LOAD:
         case OP_STORE: {
@@ -311,6 +315,11 @@ favor_decode(uint32_t code) {
             else {
                 // TODO!!!!
             }
+            break;
+        }
+
+        case OP_INT_IMM: {
+            // TODO
             break;
         }
     }
