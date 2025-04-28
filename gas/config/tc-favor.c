@@ -575,7 +575,11 @@ md_apply_fix(fixS *fixP ATTRIBUTE_UNUSED, valueT *valP ATTRIBUTE_UNUSED, segT se
         break;
     }
     default:
-        abort();
+        /* TODO: We probably want BFD_RELOC_32, BFD_RELOC_64. At the very least
+         * _64 for pointers. */
+        as_bad("Cannot represent relocation type %s\n", bfd_get_reloc_code_name(fixP->fx_r_type));
+        break;
+        //abort();
     }
 }
 
