@@ -307,7 +307,7 @@ md_assemble(char *str) {
                 insn = mk_basic_cc_misc(conditional, op_info->funct_cc);
                 break;
             }
-            case OP_CC_MISC: {
+            case OP_MISC: {
                 // TODO
                 break;
             }

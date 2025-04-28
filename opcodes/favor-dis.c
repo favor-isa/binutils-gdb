@@ -123,17 +123,17 @@ print_insn_favor(bfd_vma addr, struct disassemble_info *dis_info) {
     struct insn insn = favor_decode(op);
 
     switch(insn.p_opcode) {
-        case OP_CC_MISC:
-            switch(insn.cc_misc.funct) {
+        case OP_MISC:
+            switch(insn.misc.funct) {
                 case CCM_ILL:     pr_opname(info, "ill"); break;
                 case CCM_NOP:     pr_opname(info, "nop"); break;
                 case CCM_HALT:    pr_opname(info, "halt"); break;
                 case CCM_SYSCALL: pr_opname(info, "syscall"); break;
                 default: goto bad_op;
             };
-            pr_cond(info, insn.cc_misc.conditional);
+            pr_cond(info, insn.misc.conditional);
             break;
-        case OP_INT3: {
+        case POP_I3: {
             uint32_t is_signed = 0;
             switch(insn.int3.funct) {
                 case I3_ADD:      pr_opname(info, "add"); break;

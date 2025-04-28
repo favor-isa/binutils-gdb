@@ -316,18 +316,18 @@ sim_engine_run (SIM_DESC sd,
         TRACE_EXTRACT(scpu, "%p: %#08x", pc_addr, op);
 
         switch(insn.p_opcode) {
-            case OP_CC_MISC:
-                if(insn.cc_misc.funct >= CCM_SETEQ && insn.cc_misc.funct <= CCM_SETNEG) {
-                  int condition = insn.cc_misc.funct - CCM_SETEQ;
+            case OP_MISC:
+                if(insn.misc.funct >= CCM_SETEQ && insn.misc.funct <= CCM_SETNEG) {
+                  int condition = insn.misc.funct - CCM_SETEQ;
                   #define FN(idx) cpu->c_codes[idx] = compute_condition(&cpu->status[idx], condition);
-                  APPLY_VEC_GENERIC(insn.cc_misc, FN);
+                  APPLY_VEC_GENERIC(insn.misc, FN);
                   #undef FN
 
                   break;
                 }
                 //TRACE_DECODE(scpu, "%p: %c cc_misc %#x %#08x", pc_addr, (insn.cc_misc.conditional ? 'c' : 'u'), insn.cc_misc., insn.cc_misc.);
 
-                switch(insn.cc_misc.funct) {
+                switch(insn.misc.funct) {
                     case CCM_HALT: {
                         TRACE_INSN(scpu, "%p: halt", pc_addr);
                         /* Done. sigrc param is exit code. Maybe put a0 there? */
@@ -352,7 +352,7 @@ sim_engine_run (SIM_DESC sd,
                   }
                 }
                 break;
-            case OP_INT3:
+            case POP_I3:
                 switch(insn.int3.funct) {
                   case I3_ADD: APPLY_VEC3(insn.int3, MASKED_ARITH, status_add, insn.int3.sz, +); break;
                   case I3_SUB: APPLY_VEC3(insn.int3, MASKED_ARITH, status_add, insn.int3.sz, -); break;

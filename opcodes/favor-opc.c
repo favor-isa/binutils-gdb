@@ -314,7 +314,7 @@ favor_decode(uint32_t code) {
                 insn.singleton.is_return   = code >> 4;
                 insn.singleton.conditional = code >> 6;
                 insn.singleton.funct =
-                    (code >>  7) & 0x1F |
+                    ((code >>  7) & 0x1F) |
                     ((code >> 17) << 5);
             }
             else {
