@@ -519,11 +519,12 @@ md_estimate_size_before_relax (fragS* fragp, segT) {
 
 static uint32_t
 get(char *buf) {
+    unsigned char *buf2 = (unsigned char*)buf;
     uint32_t result = 0;
-    result |= (uint32_t)buf[0];
-    result |= ((uint32_t)buf[1] << 8);
-    result |= ((uint32_t)buf[2] << 16);
-    result |= ((uint32_t)buf[3] << 24);
+    result |= (uint32_t)buf2[0];
+    result |= ((uint32_t)buf2[1] << 8);
+    result |= ((uint32_t)buf2[2] << 16);
+    result |= ((uint32_t)buf2[3] << 24);
     return result;
 }
 
@@ -540,7 +541,7 @@ md_apply_fix(fixS *fixP ATTRIBUTE_UNUSED, valueT *valP ATTRIBUTE_UNUSED, segT se
     case BFD_RELOC_FAVOR_J22_PCREL: {
         // TODO: CUstom relocation
         uint32_t insn = get(buf);
-        insn |= ((uint32_t)val >> 2) << 10;
+        insn |= ((uint32_t)val >> 2) << 6;
         output(buf, insn);
         if(fixP->fx_addsy == NULL) {
             // Done with fixes that have no symbol, as they're always
@@ -562,8 +563,9 @@ md_apply_fix(fixS *fixP ATTRIBUTE_UNUSED, valueT *valP ATTRIBUTE_UNUSED, segT se
 
         // TODO: CUstom relocation
         uint32_t insn = get(buf);
-        insn |= (uint32_t)((val >> shift) & 0xFFFF) << 10;
-        //output(buf, insn);
+        printf("got relocation from buf: %p -> %x | %x\n", buf, insn, *(uint32_t*)(buf));
+        insn |= (uint32_t)((val >> shift) & 0xFFFF) << 12;
+        output(buf, insn);
         if(fixP->fx_addsy == NULL) {
             // Done with fixes that have no symbol, as they're always
             // PC-relative..?
