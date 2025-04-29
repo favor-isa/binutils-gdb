@@ -34,8 +34,8 @@ install_op_info(struct favor_op_info *info) {
     if(slot) {
         /* If there was an old slot, thread our new item into the linked list. */
         struct favor_op_info *old = *slot;
-        info->next = old;
-        *slot = info;
+        info->next = old->next;
+        old->next = info;
     }
 }
 
