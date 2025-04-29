@@ -494,42 +494,83 @@ md_parse_option(int c ATTRIBUTE_UNUSED, const char *arg ATTRIBUTE_UNUSED) {
 void
 md_show_usage(FILE *stream ATTRIBUTE_UNUSED) { }
 
+struct li_info {
+    bool is_pcrel;
+    bool is_relocation;
+    bool is_signed;
+    uint64_t value;
+
+    struct insn *insn;
+
+    fragS *fragp;
+    expressionS exp;
+    char *where;
+};
+
+static void
+emit_li_info(struct li_info *li, uint64_t shift) {
+    enum bfd_reloc_code_real reloc = BFD_RELOC_FAVOR_IMM16_PCREL;
+    
+    switch(shift) {
+        case 0:  reloc = BFD_RELOC_FAVOR_IMM16_PCREL; break;
+        case 16: reloc = BFD_RELOC_FAVOR_IMM32_PCREL; break;
+        case 32: reloc = BFD_RELOC_FAVOR_IMM48_PCREL; break;
+        case 48: reloc = BFD_RELOC_FAVOR_IMM64_PCREL; break;
+    }
+
+    fix_new_exp (li->fragp,
+        (li->where - li->fragp->fr_literal),
+        4,
+        &li->exp,
+        true,
+        reloc);
+    output(li->where, favor_encode(*li->insn));
+
+    li->where += 4;
+}
+
 void
 md_convert_frag (bfd *abfd ATTRIBUTE_UNUSED, segT asec ATTRIBUTE_UNUSED,
 		 fragS *fragp)
 {
-    expressionS exp = {0};
-    bool pcrel = false;
-    //bool relocation = false;
-    bool is_signed = false;
+    struct insn insn;
+    struct li_info li = {0};
     uint32_t size = 0;
     uint64_t final_value = (uint64_t)((int64_t)fragp->fr_offset);
+
     // Initial instruction.
-    struct insn insn = favor_decode(read_code(fragp->fr_literal + fragp->fr_fix - 4));
+    insn = favor_decode(read_code(fragp->fr_literal + fragp->fr_fix - 4));
+    li.fragp = fragp;
+    li.insn = &insn;
+    li.where = fragp->fr_literal + fragp->fr_fix - 4;
 
     if(fragp->fr_symbol) {
         final_value += S_GET_VALUE(fragp->fr_symbol);
         //relocation = !S_IS_DEFINED(fragp->fr_symbol);
         // TODO: Kill parts of the value if we don't need the relocation.
-        pcrel = S_GET_SEGMENT(fragp->fr_symbol)->output_section != bfd_abs_section_ptr;
+        li.is_pcrel = S_GET_SEGMENT(fragp->fr_symbol)->output_section != bfd_abs_section_ptr;
+    }
+    else {
+        li.is_pcrel = false;
+        li.is_relocation = false;
     }
     printf("convert frag: sym value = %lu\n", final_value);
     
-    exp.X_add_number = fragp->fr_offset;
-    exp.X_add_symbol = fragp->fr_symbol;
-    exp.X_op = (exp.X_add_symbol ? O_symbol : O_constant);
+    li.exp.X_add_number = fragp->fr_offset;
+    li.exp.X_add_symbol = fragp->fr_symbol;
+    li.exp.X_op = (li.exp.X_add_symbol ? O_symbol : O_constant);
 
     //fragp->fr_fix += 12;
-    char *where = fragp->fr_literal + fragp->fr_fix - 4;
+    
 
     // The insn was created by the md_assemble function. At this point, we just
     // rewrite the funct field.
     gas_assert(insn.p_opcode == POP_LD_IMM);
     size = insn.ld_imm.imm;
-    is_signed = insn.ld_imm.funct == LDI0S;
+    li.is_signed = insn.ld_imm.funct == LDI0S;
 
-    if(pcrel) {
-        if(!is_signed) {
+    if(li.is_pcrel) {
+        if(!li.is_signed) {
             as_bad_where(fragp->fr_file, fragp->fr_line, "Expected signed load for pc-rel load.");
         }
         if(size < 2) {
@@ -569,54 +610,26 @@ md_convert_frag (bfd *abfd ATTRIBUTE_UNUSED, segT asec ATTRIBUTE_UNUSED,
     }
 
 sz_64:
-    fix_new_exp (fragp,
-        (where - fragp->fr_literal),
-        4,
-        &exp,
-        true,
-        BFD_RELOC_FAVOR_IMM64_PCREL);
-    output(where, favor_encode(insn));
-    where += 4;
+    emit_li_info(&li, 48);
 
     insn.ld_imm.funct = LDI2O;
-    fix_new_exp (fragp,
-        (where - fragp->fr_literal),
-        4,
-        &exp,
-        true,
-        BFD_RELOC_FAVOR_IMM48_PCREL);
-    output(where, favor_encode(insn));
-    where += 4;
+    emit_li_info(&li, 32);
 
     insn.ld_imm.funct = LDI1O;
 sz_32:
-    fix_new_exp (fragp,
-        (where - fragp->fr_literal),
-        4,
-        &exp,
-        true,
-        BFD_RELOC_FAVOR_IMM32_PCREL);
-    output(where, favor_encode(insn));
-    where += 4;
+    emit_li_info(&li, 16);
 
-    if(pcrel) {
+    if(li.is_pcrel) {
         insn.ld_imm.funct = LDI0OPC;
     }
     else {
         insn.ld_imm.funct = LDI0O;
     }
 sz_16:
-    fix_new_exp (fragp,
-        (where - fragp->fr_literal),
-        4,
-        &exp,
-        true,
-        BFD_RELOC_FAVOR_IMM16_PCREL);
-    output(where, favor_encode(insn));
-    where += 4;
+    emit_li_info(&li, 0);
 
     valueT old = fragp->fr_fix;
-    fragp->fr_fix = (uintptr_t)where - (uintptr_t)fragp->fr_literal;
+    fragp->fr_fix = (uintptr_t)li.where - (uintptr_t)fragp->fr_literal;
     printf("grew by: %lu octets", (fragp->fr_fix - old));
 
     if(fragp->fr_next) {
