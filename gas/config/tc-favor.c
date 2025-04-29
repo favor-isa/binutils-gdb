@@ -182,9 +182,19 @@ parse_ty(char *str, struct ty *out) {
     }
 
     if(*str == 'x') {
-        //char *vec_start, *vec_end;
-        //str++;
-        // TODO VEC
+        char *vec_start, *vec_end;
+        str++;
+        vec_start = str;
+        vec_end = (str = skip_number(str));
+        if((size_t)(vec_end - vec_start) > 1) {
+            as_bad("Unknown vector size.");
+            return str;
+        }
+        if(*vec_start < '1' || *vec_start > '4') {
+            as_bad("Unknown vector size.");
+            return str;
+        }
+        out->vec = *vec_start - '1';
     }
     else {
         out->vec = 0;
