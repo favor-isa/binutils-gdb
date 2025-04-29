@@ -8,22 +8,26 @@
 struct favor_op_info {
     const char *name;
 
-    uint32_t opcode;
-    
-    union { int32_t funct_u; uint32_t funct_cc; uint32_t funct_j; uint32_t funct; };
-    int32_t funct_s;
-    int32_t funct_f;
-    int32_t funct_x;
+    uint32_t parser;
+    uint32_t funct;
+    uint32_t type;
 };
 
-// struct favor_ty_info {
-//     const char *name;
+enum favor_op_parse {
+    PARSE_3ARG,
+    PARSE_PSUEDO_LI,
+    PARSE_REAL_LI,
+    PARSE_SINGLETON,
+    PARSE_SINGLETON_TYPED,
+    PARSE_JUMP,
+};
 
-//     uint32_t u: 1;
-//     uint32_t f: 1;
-//     uint32_t sz: 2;
-//     uint32_t vec: 2;
-// };
+enum favor_op_type {
+    TYPE_NONE,
+    TYPE_U,
+    TYPE_S,
+    TYPE_F
+};
 
 struct favor_reg_info {
     const char *name;
@@ -138,31 +142,41 @@ enum condition {
     COND_LEU,
     COND_NEG,
     // really non-negative: todo better name?
-    COND_POS
+    COND_NNE
 };
 
 enum cc_misc {
     CCM_SINGLETON = 0,
-    CCM_ILL,
-    CCM_NOP,
-    CCM_HALT,
-    CCM_SYSCALL,
-    CCM_SETEQ,
-    CCM_SETNE,
-    CCM_SETG,
-    CCM_SETL,
-    CCM_SETGE,
-    CCM_SETLE,
-    CCM_SETGU,
-    CCM_SETLU,
-    CCM_SETGEU,
-    CCM_SETLEU,
-    CCM_SETNEG,
-    CCM_SETPOS,
     CCM_TEST, /* Test the dest register, set C = 1 if the bit is set */
     CCM_READC,
     CCM_WRITEC,
     CCM_WRITEC_IMM,
+};
+
+enum singleton {
+    SNG_ILL,
+    SNG_NOP,
+    SNG_HALT,
+    SNG_SYSCALL,
+
+
+
+    SNG_SETEQ = 16,
+    SNG_SETNE,
+    SNG_SETG,
+    SNG_SETL,
+    SNG_SETGE,
+    SNG_SETLE,
+    SNG_SETGU,
+    SNG_SETLU,
+    SNG_SETGEU,
+    SNG_SETLEU,
+    SNG_SETNEG,
+    SNG_SETNNE,
+    SNG_SETRES0,
+    SNG_SETRES1,
+    SNG_SETRES2,
+    SNG_SETRES3,
 };
 
 enum jump {
@@ -206,6 +220,8 @@ enum jump {
 enum int3 {
     I3_ADD,
     I3_SUB,
+    I3_ADDC,
+    I3_SUBC,
     I3_LSH,
     I3_RSHU,
     I3_RSHS,
@@ -214,25 +230,40 @@ enum int3 {
     I3_AND,
     I3_OR,
     I3_XOR,
-    I3_MINS,
     I3_MINU,
-    I3_MAXS,
+    I3_MINS,
     I3_MAXU,
-    I3_LOG_AND,
-    I3_LOG_OR,
-    I3_SAT_ADDS,
-    I3_SAT_ADDU,
-    I3_SAT_SUBS,
-    I3_SAT_SUBU
+    I3_MAXS,
+    // I3_LOG_AND,
+    // I3_LOG_OR,
+    // I3_SAT_ADDS,
+    // I3_SAT_ADDU,
+    // I3_SAT_SUBS,
+    // I3_SAT_SUBU
 };
 
 enum int2 {
+    I2_CMP_EQ,
+    I2_CMP_NE,
+    I2_CMP_G,
+    I2_CMP_L,
+    I2_CMP_GE,
+    I2_CMP_LE,
+    I2_CMP_GU,
+    I2_CMP_LU,
+    I2_CMP_GEU,
+    I2_CMP_LEU,
+    I2_CMP_NEG,
+    // really non-negative: todo better name?
+    I2_CMP_NNE,
+    I2_CMP_RES0,
+    I2_CMP_RES1,
+    I2_CMP_RES2,
+    I2_CMP_RES3,
+    I2_CMP,
     I2_NEGATE,
     I2_NOT,
-    I2_LOG_NOT,
-    I2_LOG_IDENTITY,
-    I2_CMP,
-    I2_SWIZZLE, /* Requires 8-bit arg */
+    
 };
 
 enum float3 {

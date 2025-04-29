@@ -3,62 +3,86 @@
 
 #include <assert.h>
 
-#define UF(uv, fv)      .funct_u = uv, .funct_s = -1, .funct_f = fv, .funct_x = -1
-#define U(uv)           .funct_u = uv, .funct_s = -1, .funct_f = -1, .funct_x = -1
-#define US(uv, sv)      .funct_u = uv, .funct_s = sv, .funct_f = -1, .funct_x = -1
-#define USF(uv, sv, fv) .funct_u = uv, .funct_s = sv, .funct_f = fv, .funct_x = -1
+#define RESERVED { .name = NULL }
 
-/* Table mapping opcode names to data. */
-struct favor_op_info
-favor_op_table[] = {
-    { .name = "add", .opcode = OP_INT_FLOAT_3, UF(I3_ADD, F3_ADD) },
-    { .name = "sub", .opcode = OP_INT_FLOAT_3, UF(I3_SUB, F3_SUB) },
-    { .name = "lsh", .opcode = OP_INT_FLOAT_3, U (I3_LSH) },
-    { .name = "rsh", .opcode = OP_INT_FLOAT_3, US(I3_RSHU, I3_RSHS) },
-    { .name = "rol", .opcode = OP_INT_FLOAT_3, U (I3_ROL) },
-    { .name = "ror", .opcode = OP_INT_FLOAT_3, U (I3_ROR) },
-    { .name = "and", .opcode = OP_INT_FLOAT_3, U (I3_AND) },
-    { .name = "or" , .opcode = OP_INT_FLOAT_3, U (I3_OR) },
-    { .name = "xor", .opcode = OP_INT_FLOAT_3, U (I3_XOR) },
-    { .name = "min", .opcode = OP_INT_FLOAT_3, USF(I3_MINU, I3_MINS, F3_MIN) },
-    { .name = "max", .opcode = OP_INT_FLOAT_3, USF(I3_MAXU, I3_MAXS, F3_MAX) },
-    { .name = "logand", .opcode = OP_INT_FLOAT_3, U(I3_LOG_AND) },
-    { .name = "logor" , .opcode = OP_INT_FLOAT_3, U(I3_LOG_OR) },
-    { .name = "satadd", .opcode = OP_INT_FLOAT_3, US(I3_SAT_ADDU, I3_SAT_ADDS) },
-    { .name = "satsub", .opcode = OP_INT_FLOAT_3, US(I3_SAT_ADDU, I3_SAT_ADDS) },
-
-
-    { .name = "ill",     .opcode = OP_CC_MISC_SINGLETON, .funct_cc = CCM_ILL },
-    { .name = "nop",     .opcode = OP_CC_MISC_SINGLETON, .funct_cc = CCM_NOP },
-    { .name = "halt",    .opcode = OP_CC_MISC_SINGLETON, .funct_cc = CCM_HALT },
-    { .name = "syscall", .opcode = OP_CC_MISC_SINGLETON, .funct_cc = CCM_SYSCALL },
-
-    { .name = "j", .opcode = OP_JUMP, .funct_j = J_JUMP },
-
-    { .name = "ld", .opcode = OP_LOAD },
-};
-
-FAVOR_OP_TABLE_DEFINE(ld_imm, 
-    { .name = "ldi3u", .opcode = POP_LD_IMM, .funct = LDI3U },
-    { .name = "ldi3o", .opcode = POP_LD_IMM, .funct = LDI3O },
-
-    { .name = "ldi2s", .opcode = POP_LD_IMM, .funct = LDI2S },
-    { .name = "ldi2u", .opcode = POP_LD_IMM, .funct = LDI2U },
-    { .name = "ldi2o", .opcode = POP_LD_IMM, .funct = LDI2O },
-    
-    { .name = "ldi1s", .opcode = POP_LD_IMM, .funct = LDI1S },
-    { .name = "ldi1u", .opcode = POP_LD_IMM, .funct = LDI1U },
-    { .name = "ldi1o", .opcode = POP_LD_IMM, .funct = LDI1O },
-    
-    { .name = "ldi0s", .opcode = POP_LD_IMM, .funct = LDI0S },
-    { .name = "ldi0u", .opcode = POP_LD_IMM, .funct = LDI0U },
-    { .name = "ldi0o", .opcode = POP_LD_IMM, .funct = LDI0O },
-    
-    { .name = "ldi0opc", .opcode = POP_LD_IMM, .funct = LDI0OPC },
-    { .name = "ldi0s32", .opcode = POP_LD_IMM, .funct = LDI0S32 },
+FAVOR_OP_TABLE_DEFINE(singleton,
+    { .parser = PARSE_SINGLETON, .name = "ill",     .funct = SNG_ILL },
+    { .parser = PARSE_SINGLETON, .name = "nop",     .funct = SNG_NOP },
+    { .parser = PARSE_SINGLETON, .name = "halt",    .funct = SNG_HALT },
+    { .parser = PARSE_SINGLETON, .name = "syscall", .funct = SNG_SYSCALL },
+    RESERVED,
+    RESERVED,
+    RESERVED,
+    RESERVED,
+    RESERVED,
+    RESERVED,
+    RESERVED,
+    RESERVED,
+    RESERVED,
+    RESERVED,
+    RESERVED,
+    RESERVED,
+    { .parser = PARSE_SINGLETON, .name = "seteq", .funct = SNG_SETEQ },
+    { .parser = PARSE_SINGLETON, .name = "setne", .funct = SNG_SETNE },
+    { .parser = PARSE_SINGLETON_TYPED, .name = "setg" , .funct = SNG_SETG,   .type = TYPE_S },
+    { .parser = PARSE_SINGLETON_TYPED, .name = "setl",  .funct = SNG_SETL,   .type = TYPE_S },
+    { .parser = PARSE_SINGLETON_TYPED, .name = "setge", .funct = SNG_SETGE,  .type = TYPE_S },
+    { .parser = PARSE_SINGLETON_TYPED, .name = "setle", .funct = SNG_SETLE,  .type = TYPE_S },
+    { .parser = PARSE_SINGLETON_TYPED, .name = "setg",  .funct = SNG_SETGU,  .type = TYPE_U },
+    { .parser = PARSE_SINGLETON_TYPED, .name = "setl",  .funct = SNG_SETLU,  .type = TYPE_U },
+    { .parser = PARSE_SINGLETON_TYPED, .name = "setge", .funct = SNG_SETGEU, .type = TYPE_U },
+    { .parser = PARSE_SINGLETON_TYPED, .name = "setle", .funct = SNG_SETLEU, .type = TYPE_U },
+    { .parser = PARSE_SINGLETON, .name = "setneg", .funct = SNG_SETNEG },
+    { .parser = PARSE_SINGLETON, .name = "setnne", .funct = SNG_SETNNE },
+    RESERVED,
+    RESERVED,
+    RESERVED,
+    RESERVED
 )
 
-size_t favor_op_table_size = sizeof(favor_op_table) / sizeof(*favor_op_table);
+FAVOR_OP_TABLE_DEFINE(psuedo,
+    { .parser = PARSE_JUMP, .name = "j" },
+    { .parser = PARSE_PSUEDO_LI, .name = "li" }
+)
+
+FAVOR_OP_TABLE_DEFINE(int3,
+    { .parser = PARSE_3ARG, .name = "add",  .funct = I3_ADD,  .type = TYPE_U },
+    { .parser = PARSE_3ARG, .name = "sub",  .funct = I3_SUB,  .type = TYPE_U },
+    { .parser = PARSE_3ARG, .name = "addc", .funct = I3_ADDC, .type = TYPE_U },
+    { .parser = PARSE_3ARG, .name = "subc", .funct = I3_SUBC, .type = TYPE_U },
+    { .parser = PARSE_3ARG, .name = "lsh",  .funct = I3_LSH,  .type = TYPE_U },
+    { .parser = PARSE_3ARG, .name = "rsh",  .funct = I3_RSHU, .type = TYPE_U },
+    { .parser = PARSE_3ARG, .name = "rsh",  .funct = I3_RSHS, .type = TYPE_U },
+    { .parser = PARSE_3ARG, .name = "rol",  .funct = I3_ROL,  .type = TYPE_U },
+    { .parser = PARSE_3ARG, .name = "ror",  .funct = I3_ROR,  .type = TYPE_U },
+    { .parser = PARSE_3ARG, .name = "and",  .funct = I3_AND,  .type = TYPE_U },
+    { .parser = PARSE_3ARG, .name = "or",   .funct = I3_OR,   .type = TYPE_U },
+    { .parser = PARSE_3ARG, .name = "xor",  .funct = I3_XOR,  .type = TYPE_U },
+    { .parser = PARSE_3ARG, .name = "min",  .funct = I3_MINU, .type = TYPE_U },
+    { .parser = PARSE_3ARG, .name = "min",  .funct = I3_MINS, .type = TYPE_U },
+    { .parser = PARSE_3ARG, .name = "max",  .funct = I3_MAXU, .type = TYPE_U },
+    { .parser = PARSE_3ARG, .name = "max",  .funct = I3_MAXS, .type = TYPE_U },
+)
+
+FAVOR_OP_TABLE_DEFINE(ld_imm, 
+    { .parser = PARSE_REAL_LI, .name = "ldi3u",   .funct = LDI3U },
+    { .parser = PARSE_REAL_LI, .name = "ldi3o",   .funct = LDI3O },
+
+    { .parser = PARSE_REAL_LI, .name = "ldi2s",   .funct = LDI2S },
+    { .parser = PARSE_REAL_LI, .name = "ldi2u",   .funct = LDI2U },
+    { .parser = PARSE_REAL_LI, .name = "ldi2o",   .funct = LDI2O },
+    
+    { .parser = PARSE_REAL_LI, .name = "ldi1s",   .funct = LDI1S },
+    { .parser = PARSE_REAL_LI, .name = "ldi1u",   .funct = LDI1U },
+    { .parser = PARSE_REAL_LI, .name = "ldi1o",   .funct = LDI1O },
+    
+    { .parser = PARSE_REAL_LI, .name = "ldi0s",   .funct = LDI0S },
+    { .parser = PARSE_REAL_LI, .name = "ldi0u",   .funct = LDI0U },
+    { .parser = PARSE_REAL_LI, .name = "ldi0o",   .funct = LDI0O },
+    
+    { .parser = PARSE_REAL_LI, .name = "ldi0opc", .funct = LDI0OPC },
+    { .parser = PARSE_REAL_LI, .name = "ldi0s32", .funct = LDI0S32 },
+)
 
 #define REG(r) .reg = r, .reg_mask = (r & 0x1F), .f = (r >> 5)
 
