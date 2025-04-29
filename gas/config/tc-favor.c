@@ -32,10 +32,11 @@ install_op_info(struct favor_op_info *info) {
     /* First, place the new info into the hash, but don't replace old info. */
     void **slot = str_hash_insert(opcode_hash, info->name, info, 0);
     if(slot) {
-        /* If there was an old slot, thread our new item into the linked list. */
-        struct favor_op_info *old = *slot;
-        info->next = old->next;
-        old->next = info;
+        string_tuple_t *elt = *slot;
+        /* If there was an old slot, thread our new item into the linked list.
+         * Note: We have to cast away the const but that should be fine. */
+        info->next = (void*)elt->value;
+        elt->value = info;
     }
 }
 
