@@ -518,12 +518,21 @@ emit_li_info(struct li_info *li, uint64_t shift) {
         case 48: reloc = BFD_RELOC_FAVOR_IMM64_PCREL; break;
     }
 
-    fix_new_exp (li->fragp,
-        (li->where - li->fragp->fr_literal),
-        4,
-        &li->exp,
-        true,
-        reloc);
+    if(li->is_relocation) {
+        if(!li->is_pcrel) {
+            as_bad_where(li->fragp->fr_file, li->fragp->fr_line, "Non-pcrel relocations are not supported yet.");
+        }
+        fix_new_exp (li->fragp,
+            (li->where - li->fragp->fr_literal),
+            4,
+            &li->exp,
+            true,
+            reloc);
+    }
+    else {
+        // If we aren't relocating the value, we just emit it directly.
+        li->insn->ld_imm.imm = li->value >> shift;
+    }
     output(li->where, favor_encode(*li->insn));
 
     li->where += 4;
@@ -536,7 +545,6 @@ md_convert_frag (bfd *abfd ATTRIBUTE_UNUSED, segT asec ATTRIBUTE_UNUSED,
     struct insn insn;
     struct li_info li = {0};
     uint32_t size = 0;
-    uint64_t final_value = (uint64_t)((int64_t)fragp->fr_offset);
 
     // Initial instruction.
     insn = favor_decode(read_code(fragp->fr_literal + fragp->fr_fix - 4));
@@ -544,17 +552,24 @@ md_convert_frag (bfd *abfd ATTRIBUTE_UNUSED, segT asec ATTRIBUTE_UNUSED,
     li.insn = &insn;
     li.where = fragp->fr_literal + fragp->fr_fix - 4;
 
+    li.value = (uint64_t)((int64_t)fragp->fr_offset);
+
     if(fragp->fr_symbol) {
-        final_value += S_GET_VALUE(fragp->fr_symbol);
+        li.value += S_GET_VALUE(fragp->fr_symbol);
         //relocation = !S_IS_DEFINED(fragp->fr_symbol);
         // TODO: Kill parts of the value if we don't need the relocation.
         li.is_pcrel = S_GET_SEGMENT(fragp->fr_symbol)->output_section != bfd_abs_section_ptr;
+
+        // Always relocate pcrel values in case they change at link time.
+        if(li.is_pcrel) {
+            li.is_relocation = true;
+        }
     }
     else {
         li.is_pcrel = false;
         li.is_relocation = false;
     }
-    printf("convert frag: sym value = %lu\n", final_value);
+    printf("convert frag: sym value = %lu\n", li.value);
     
     li.exp.X_add_number = fragp->fr_offset;
     li.exp.X_add_symbol = fragp->fr_symbol;
@@ -600,7 +615,7 @@ md_convert_frag (bfd *abfd ATTRIBUTE_UNUSED, segT asec ATTRIBUTE_UNUSED,
         case 1: insn.ld_imm.funct = LDI0U; goto sz_16;
         case 0: {
             // TODO: Check that values fit?
-            final_value &= 0xFF;
+            li.value &= 0xFF;
             insn.ld_imm.funct = LDI0U;
             goto sz_16;
         }
