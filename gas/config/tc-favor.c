@@ -537,18 +537,30 @@ md_convert_frag (bfd *abfd ATTRIBUTE_UNUSED, segT asec ATTRIBUTE_UNUSED,
         }
     }
     
-
+    /**
+     * It is important to be careful about signed/unsigned values.
+     * - The only use of the ldi*s instructions is to sign-extend a *smaller*
+     *   value into a larger one. So, for example, we can sign-extend a 32-bit
+     *   immediate into a 64-bit signed value. But importantly, we do NOT call
+     *   ldi1s if loading a 32-bit value! Because we want the upper 64 bits to
+     *   be 0 in that case.
+     * - The following sign extensions are available:
+     *   - Anything -> 64 bits using the s variants
+     *   - 1 half-word -> 32 bits using LDI032S
+     *   - There is no need to sign-extend to 16 or 8 bits as the 16 bit 
+     *     immediate is enough to represent all values.
+     */
     switch(size) {
         case 3: insn.ld_imm.funct = LDI3U; goto sz_64;
         case 2: {
-            insn.ld_imm.funct = is_signed ? LDI1S : LDI1U;
+            insn.ld_imm.funct = LDI1U;
             goto sz_32;
         }
-        case 1: insn.ld_imm.funct = is_signed ? LDI0S : LDI0U; goto sz_16;
+        case 1: insn.ld_imm.funct = LDI0U; goto sz_16;
         case 0: {
             // TODO: Check that values fit?
             final_value &= 0xFF;
-            insn.ld_imm.funct = is_signed ? LDI0S : LDI0U;
+            insn.ld_imm.funct = LDI0U;
             goto sz_16;
         }
         default: {
