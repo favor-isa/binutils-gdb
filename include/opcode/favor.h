@@ -11,6 +11,8 @@ struct favor_op_info {
     uint32_t parser;
     uint32_t funct;
     uint32_t type;
+
+    struct favor_op_info *next;
 };
 
 enum favor_op_parse {
@@ -46,7 +48,11 @@ struct favor_op_info favor_op_ ## name[] = { \
 }; \
 size_t favor_op_ ## name ## _count = sizeof(favor_op_ ## name) / sizeof(*favor_op_ ## name);
 
+FAVOR_OP_TABLE_DECLARE(singleton)
+FAVOR_OP_TABLE_DECLARE(int3)
 FAVOR_OP_TABLE_DECLARE(ld_imm)
+
+FAVOR_OP_TABLE_DECLARE(psuedo)
 
 extern struct favor_op_info favor_op_table[];
 extern size_t favor_op_table_size;
@@ -519,11 +525,12 @@ struct insn {
 
 static inline
 struct insn
-mk_basic_cc_misc(uint32_t conditional, uint32_t funct) {
+mk_singleton(uint32_t conditional, uint32_t funct) {
     struct insn result = {0};
-    result.p_opcode = OP_MISC;
-    result.misc.conditional = conditional;
-    result.misc.funct = funct;
+    result.p_opcode = POP_SINGLETON;
+    result.singleton.conditional = conditional;
+    result.singleton.funct = funct;
+    result.singleton.is_return = 0;
     return result;
 }
 

@@ -93,7 +93,7 @@ compute_condition(struct favor_sim_status *status, int condition) {
     case COND_GEU: return  status->carry;
     case COND_LEU: return !status->carry ||  status->zero;
     case COND_NEG: return  status->sign;
-    case COND_POS: return !status->sign;
+    case COND_NNE: return !status->sign;
   }
   return 0;
 }
@@ -316,9 +316,9 @@ sim_engine_run (SIM_DESC sd,
         TRACE_EXTRACT(scpu, "%p: %#08x", pc_addr, op);
 
         switch(insn.p_opcode) {
-            case OP_MISC:
-                if(insn.misc.funct >= CCM_SETEQ && insn.misc.funct <= CCM_SETNEG) {
-                  int condition = insn.misc.funct - CCM_SETEQ;
+            case POP_SINGLETON:
+                if(insn.misc.funct >= SNG_SETEQ && insn.misc.funct <= SNG_SETNEG) {
+                  int condition = insn.misc.funct - SNG_SETEQ;
                   #define FN(idx) cpu->c_codes[idx] = compute_condition(&cpu->status[idx], condition);
                   APPLY_VEC_GENERIC(insn.misc, FN);
                   #undef FN
@@ -328,12 +328,12 @@ sim_engine_run (SIM_DESC sd,
                 //TRACE_DECODE(scpu, "%p: %c cc_misc %#x %#08x", pc_addr, (insn.cc_misc.conditional ? 'c' : 'u'), insn.cc_misc., insn.cc_misc.);
 
                 switch(insn.misc.funct) {
-                    case CCM_HALT: {
+                    case SNG_HALT: {
                         TRACE_INSN(scpu, "%p: halt", pc_addr);
                         /* Done. sigrc param is exit code. Maybe put a0 there? */
                         sim_engine_halt(sd, scpu, NULL, cpu->pc, sim_exited, 0);
                         break;
-                    case CCM_SYSCALL:
+                    case SNG_SYSCALL:
                         TRACE_INSN(scpu, "%p: syscall", pc_addr);
                         /* TODO: Truncate the values in a well-defined way. */
                         cpu->gpr[REG_A0] = sim_syscall(scpu,
@@ -343,7 +343,7 @@ sim_engine_run (SIM_DESC sd,
                             (long)cpu->gpr[REG_A2],
                             (long)cpu->gpr[REG_A3]);
                         break;
-                    case CCM_NOP: break; /* nop */
+                    case SNG_NOP: break; /* nop */
                     default:
                         /* Illegal instruction. SIGILL */
                         TRACE_INSN(scpu, "%p: illegal %#x", pc_addr, op);

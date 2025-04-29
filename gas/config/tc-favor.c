@@ -22,6 +22,23 @@ enum relax_types {
 void
 md_operand(expressionS *exp ATTRIBUTE_UNUSED) {}
 
+static void
+install_op_info(struct favor_op_info *info) {
+    /* Use a NULL name field to indicate a reserved slot in the table. */
+    if(!info->name) {
+        return;
+    }
+
+    /* First, place the new info into the hash, but don't replace old info. */
+    void **slot = str_hash_insert(opcode_hash, info->name, info, 0);
+    if(slot) {
+        /* If there was an old slot, thread our new item into the linked list. */
+        struct favor_op_info *old = *slot;
+        info->next = old;
+        *slot = info;
+    }
+}
+
 /**
  * Initialization.
  */
@@ -33,16 +50,14 @@ md_begin(void) {
 #define FAVOR_OP_TABLE_INSTALL(table) \
 for(i = 0; i < favor_op_ ## table ## _count; ++i) { \
     struct favor_op_info *op = &favor_op_ ## table[i]; \
-    str_hash_insert(opcode_hash, op->name, op, 0); \
+    install_op_info(op); \
 }
 
+    FAVOR_OP_TABLE_INSTALL(singleton)
+    FAVOR_OP_TABLE_INSTALL(int3)
     FAVOR_OP_TABLE_INSTALL(ld_imm)
-    // TODO: Refactor main table
-    for(i = 0; i < favor_op_table_size; ++i) {
-        struct favor_op_info *op = &favor_op_table[i];
-        str_hash_insert(opcode_hash, op->name, op, 0);
-    }
 
+    FAVOR_OP_TABLE_INSTALL(psuedo)
 #undef FAVOR_OP_TABLE_INSTALL
 
     reg_hash = str_htab_create();
@@ -117,6 +132,8 @@ struct ty {
     uint32_t f : 1;
     uint32_t sz: 2;
     uint32_t vec: 2;
+
+    uint32_t type;
 };
 
 static char*
@@ -126,9 +143,9 @@ parse_ty(char *str, struct ty *out) {
     str++;
 
     switch(*str) { \
-        case 'u': out->u = 1; out->f = 0; break;
-        case 's': out->u = 0; out->f = 0; break;
-        case 'f': out->u = 0; out->f = 1; break;
+        case 'u': out->u = 1; out->f = 0; out->type = TYPE_U; break;
+        case 's': out->u = 0; out->f = 0; out->type = TYPE_S; break;
+        case 'f': out->u = 0; out->f = 1; out->type = TYPE_F; break;
         default: as_bad("Unknown type specifier %c.", *str); return str;
     }
 
@@ -264,6 +281,25 @@ end_frag_with_exp(expressionS *exp, size_t max_chars, size_t var, relax_substate
         substate, sym, offset, NULL/*offset, opcode*/);
 }
 
+static struct favor_op_info*
+lookup_type(struct favor_op_info *chain, uint32_t type) {
+    struct favor_op_info *head = chain;
+    while(chain) {
+        if(chain->type == type) {
+            return chain;
+        }
+        chain = chain->next;
+    }
+
+    switch(type) {
+        case TYPE_U: as_bad("No such unsigned operation '%s'.", head->name); break;
+        case TYPE_S: as_bad("No such signed operation '%s'.", head->name); break;
+        case TYPE_F: as_bad("No such floating-point operation '%s'.", head->name); break;
+    }
+
+    return NULL;
+}
+
 void
 md_assemble(char *str) {
     uint32_t conditional = 0;
@@ -301,39 +337,29 @@ md_assemble(char *str) {
     if(op_info) {
         where = frag_more (4);
 
-        switch(op_info->opcode) {
-            case OP_CC_MISC_SINGLETON: {
+        switch(op_info->parser) {
+            case PARSE_SINGLETON: {
                 PARSE_CONDITIONAL();
-                insn = mk_basic_cc_misc(conditional, op_info->funct_cc);
+                insn = mk_singleton(conditional, op_info->funct);
                 break;
             }
-            case OP_MISC: {
-                // TODO
-                break;
-            }
-            case OP_INT_FLOAT_3: {
+            case PARSE_3ARG: {
                 PARSE_TY();
                 PARSE_CONDITIONAL();
-                if(ty.f) {
-                    if(op_info->funct_f < 0) { as_bad("No such floating-point operation."); return; }
-                }
-                else if(ty.u) {
-                    if(op_info->funct_u < 0) { as_bad("No such unsigned integer operation."); return; }
-                }
-                else {
-                    if(op_info->funct_s < 0) { as_bad("No such signed integer operation."); return; }
-                }
+
+                op_info = lookup_type(op_info, ty.type);
+
                 if(!parse_reg_into(&str, &dst , false, ty.f)) return;
                 if(!parse_reg_into(&str, &src1, true , ty.f)) return;
                 if(!parse_reg_into(&str, &src2, true , ty.f)) return;
-                insn = (ty.f ? mk_float3 : mk_int3)(conditional, dst, src1, src2, ty.sz, ty.vec, TY_FUNCT());
+                insn = (ty.f ? mk_float3 : mk_int3)(conditional, dst, src1, src2, ty.sz, ty.vec, op_info->funct);
                 break;
             }
-            case OP_JUMP: {
+            case PARSE_JUMP: {
                 PARSE_CONDITIONAL();
                 insn.p_opcode = OP_JUMP;
                 insn.jump.and_link = 0;
-                insn.jump.funct = op_info->funct_j;
+                insn.jump.funct = op_info->funct;
                 insn.jump.immediate = 0; // fixup
 
                 input_line_pointer = str;
@@ -348,7 +374,7 @@ md_assemble(char *str) {
 
                 break;
             }
-            case OP_LOAD: {
+            case PARSE_PSUEDO_LI: {
                 PARSE_TY();
                 PARSE_CONDITIONAL();
                 //if(!ty.f && !ty.u) { as_bad("Use an unsigned load instead"); return; }
