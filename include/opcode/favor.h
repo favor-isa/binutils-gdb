@@ -537,9 +537,10 @@ mk_singleton(uint32_t conditional, uint32_t funct) {
 
 static inline
 struct insn
-mk_int3(uint32_t conditional, uint32_t dest, uint32_t src1, uint32_t src2, uint32_t sz, uint32_t vec, uint32_t funct) {
+mk_int3(uint32_t replication, uint32_t conditional, uint32_t dest, uint32_t src1, uint32_t src2, uint32_t sz, uint32_t vec, uint32_t funct) {
     struct insn result = {0};
     result.p_opcode = POP_I3;
+    result.int3.replication = replication;
     result.int3.conditional = conditional;
     result.int3.dest = dest;
     result.int3.src1 = src1;
@@ -552,9 +553,10 @@ mk_int3(uint32_t conditional, uint32_t dest, uint32_t src1, uint32_t src2, uint3
 
 static inline
 struct insn
-mk_float3(uint32_t conditional, uint32_t dest, uint32_t src1, uint32_t src2, uint32_t sz, uint32_t vec, uint32_t funct) {
+mk_float3(uint32_t replication, uint32_t conditional, uint32_t dest, uint32_t src1, uint32_t src2, uint32_t sz, uint32_t vec, uint32_t funct) {
     struct insn result = {0};
     result.p_opcode = POP_F3;
+    result.float3.replication = replication;
     result.float3.conditional = conditional;
     result.float3.dest = dest;
     result.float3.src1 = src1;

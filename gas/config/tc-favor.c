@@ -251,6 +251,21 @@ parse_reg_into(char **str, uint32_t *out, bool comma_first, uint32_t f) {
     return true;
 }
 
+static void
+parse_replication(char **str, uint32_t *out) {
+    *out = 0;
+    for(int i = 0; i < 3; ++i) {
+        if(**str == '.') { (*str)++; }
+        else {
+            if(i > 0) {
+                as_bad("Expected exactly 0 or 3 trailing periods.");
+            }
+            return;
+        }
+    }
+    *out = 1;
+}
+
 /*
 static bool
 try_parse_reg_into(char **str, uint32_t *out, bool comma_first, uint32_t f) {
@@ -318,6 +333,7 @@ md_assemble(char *str) {
     struct favor_op_info *op_info;
     char was;
     uint32_t src1, src2, dst;
+    uint32_t replication;
     struct ty ty;
     expressionS exp;
     char *where = NULL;
@@ -363,7 +379,10 @@ md_assemble(char *str) {
                 if(!parse_reg_into(&str, &dst , false, ty.f)) return;
                 if(!parse_reg_into(&str, &src1, true , ty.f)) return;
                 if(!parse_reg_into(&str, &src2, true , ty.f)) return;
-                insn = (ty.f ? mk_float3 : mk_int3)(conditional, dst, src1, src2, ty.sz, ty.vec, op_info->funct);
+                parse_replication(&str, &replication);
+
+                insn = (ty.f ? mk_float3 : mk_int3)(replication, conditional,
+                    dst, src1, src2, ty.sz, ty.vec, op_info->funct);
                 break;
             }
             case PARSE_JUMP: {

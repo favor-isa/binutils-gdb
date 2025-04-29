@@ -93,6 +93,11 @@ pr_gpr(struct favor_dis_info *info, uint32_t reg, const char *after) {
     FPRINTF("%s%s", favor_reg_table[reg].name, after);
 }
 
+static void
+pr_replication(struct favor_dis_info *info, uint32_t replication) {
+    if(replication) FPRINTF("...");
+}
+
 static int32_t
 sign_extend_32(uint32_t input, uint32_t bit) {
     if(input & (1 << bit)) {
@@ -152,6 +157,7 @@ print_insn_favor(bfd_vma addr, struct disassemble_info *dis_info) {
             pr_gpr(info, insn.int3.dest, ", ");
             pr_gpr(info, insn.int3.src1, ", ");
             pr_gpr(info, insn.int3.src2, "");
+            pr_replication(info, insn.int3.replication);
 
             break;
         }
