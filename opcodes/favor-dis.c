@@ -24,10 +24,16 @@ struct favor_dis_info {
     size_t oplen;
 };
 
-static const char*
+static
+struct favor_op_info*
 lookup_opcode(struct favor_op_info *table, size_t size, uint32_t funct) {
     if(funct < size) {
-        return table[funct].name;
+        if(table[funct].name == NULL) {
+            /* Null name -- reserved slot, not real opcode. Return NULL in that
+             * case. */
+            return NULL;
+        }
+        return &table[funct];
     }
     return NULL;
 }
@@ -105,7 +111,7 @@ print_insn_favor(bfd_vma addr, struct disassemble_info *dis_info) {
         .oplen = 0
     };
     bfd_byte the_bytes[4];
-    uint32_t op = 0;
+    uint32_t opcode = 0;
     int err = dis_info->read_memory_func(addr, the_bytes, 4, dis_info);
     struct favor_dis_info * const info = &the_info;
     if(err) {
@@ -114,49 +120,32 @@ print_insn_favor(bfd_vma addr, struct disassemble_info *dis_info) {
     }
 
     // Create opcode out of bytes.
-    op |= the_bytes[0];
-    op |= (the_bytes[1] << 8);
-    op |= (the_bytes[2] << 16);
-    op |= (the_bytes[3] << 24);
+    opcode |= the_bytes[0];
+    opcode |= (the_bytes[1] << 8);
+    opcode |= (the_bytes[2] << 16);
+    opcode |= (the_bytes[3] << 24);
 
     // We read the opcode, disassemble it.
-    struct insn insn = favor_decode(op);
+    struct insn insn = favor_decode(opcode);
 
     switch(insn.p_opcode) {
-        case OP_MISC:
-            switch(insn.misc.funct) {
-                case CCM_ILL:     pr_opname(info, "ill"); break;
-                case CCM_NOP:     pr_opname(info, "nop"); break;
-                case CCM_HALT:    pr_opname(info, "halt"); break;
-                case CCM_SYSCALL: pr_opname(info, "syscall"); break;
-                default: goto bad_op;
-            };
-            pr_cond(info, insn.misc.conditional);
+        case POP_SINGLETON: {
+            struct favor_op_info *op = LOOKUP_OPCODE(singleton, insn.singleton.funct);
+            if(!op) goto bad_op;
+            pr_opname(info, op->name);
+            pr_cond(info, insn.singleton.conditional);
             break;
+        }
+        case OP_MISC: {
+            goto bad_op;
+            break;
+        }
         case POP_I3: {
-            uint32_t is_signed = 0;
-            switch(insn.int3.funct) {
-                case I3_ADD:      pr_opname(info, "add"); break;
-                case I3_SUB:      pr_opname(info, "sub"); break;
-                case I3_LSH:      pr_opname(info, "lsh"); break;
-                case I3_RSHU:     pr_opname(info, "rsh"); is_signed = 0; break;
-                case I3_RSHS:     pr_opname(info, "rsh"); is_signed = 1; break;
-                case I3_ROL:      pr_opname(info, "rol"); break;
-                case I3_ROR:      pr_opname(info, "ror"); break;
-                case I3_AND:      pr_opname(info, "and"); break;
-                case I3_OR:       pr_opname(info, "or"); break;
-                case I3_XOR:      pr_opname(info, "xor"); break;
-                case I3_MINS:     pr_opname(info, "min"); is_signed = 1; break;
-                case I3_MINU:     pr_opname(info, "min"); is_signed = 0; break;
-                case I3_MAXS:     pr_opname(info, "max"); is_signed = 1; break;
-                case I3_MAXU:     pr_opname(info, "max"); is_signed = 0; break;
-                case I3_LOG_AND:  pr_opname(info, "logand"); break;
-                case I3_LOG_OR:   pr_opname(info, "logor"); break;
-                case I3_SAT_ADDS: pr_opname(info, "satadd"); is_signed = 1; break;
-                case I3_SAT_ADDU: pr_opname(info, "satadd"); is_signed = 0; break;
-                case I3_SAT_SUBS: pr_opname(info, "satsub"); is_signed = 1; break;
-                case I3_SAT_SUBU: pr_opname(info, "satsub"); is_signed = 0; break;
-            }
+            struct favor_op_info *op = LOOKUP_OPCODE(int3, insn.int3.funct);
+            if(!info) goto bad_op;
+
+            uint32_t is_signed = op->type == TYPE_S;
+            
             pr_type(info, 0, is_signed, insn.int3.sz, insn.int3.vec);
             pr_cond(info, insn.int3.conditional);
             pr_gpr(info, insn.int3.dest, ", ");
@@ -184,10 +173,10 @@ print_insn_favor(bfd_vma addr, struct disassemble_info *dis_info) {
         }
         case POP_LD_IMM: {
             // Probably we want op to just be a psuedoop, so we keep it like this?
-            const char *opname = LOOKUP_OPCODE(ld_imm, insn.ld_imm.funct);
-            if(!opname) { FPRINTF("(ldimm) "); goto bad_op; }
+            struct favor_op_info *op = LOOKUP_OPCODE(ld_imm, insn.ld_imm.funct);
+            if(!op) goto bad_op;
 
-            pr_opname(info, opname);
+            pr_opname(info, op->name);
             pr_cond(info, insn.ld_imm.conditional);
             pr_gpr(info, insn.ld_imm.dest, ", ");
             FPRINTF("0x%x", insn.ld_imm.imm);
@@ -195,7 +184,7 @@ print_insn_favor(bfd_vma addr, struct disassemble_info *dis_info) {
         }
         default:
 bad_op:
-            FPRINTF(".long 0x%08x", op);
+            FPRINTF(".long 0x%08x", opcode);
             break;
     }
 
