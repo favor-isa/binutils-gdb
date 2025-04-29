@@ -164,7 +164,7 @@ parse_ty(char *str, struct ty *out) {
         return str;
     }
 
-    if(num_start[0] == '8' && num_start[1] == '\0') {
+    if(num_start[0] == '8' && num_start + 1 == num_end) {
         out->sz = 0;
     }
     else if(num_start[0] == '1' && num_start[1] == '6') {
