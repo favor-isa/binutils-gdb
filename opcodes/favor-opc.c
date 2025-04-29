@@ -402,6 +402,7 @@ favor_decode(uint32_t code) {
                 }
             }
             else {
+                insn.p_opcode = POP_I3;
                 insn.int3.replication = code >> 5 ;
                 insn.int3.conditional = code >> 6 ;
                 insn.int3.dest        = code >> 7 ;
