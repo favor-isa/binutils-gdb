@@ -358,6 +358,7 @@ md_assemble(char *str) {
                 PARSE_CONDITIONAL();
 
                 op_info = lookup_type(op_info, ty.type);
+                if(!op_info) break;
 
                 if(!parse_reg_into(&str, &dst , false, ty.f)) return;
                 if(!parse_reg_into(&str, &src1, true , ty.f)) return;
