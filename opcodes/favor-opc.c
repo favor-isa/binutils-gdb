@@ -65,19 +65,19 @@ FAVOR_OP_TABLE_DEFINE(int3,
 )
 
 FAVOR_OP_TABLE_DEFINE(ld_imm, 
-    { .parser = PARSE_REAL_LI, .name = "li3u",   .funct = LDI3U },
+    { .parser = PARSE_REAL_LI, .name = "li3u",   .funct = LDI3U, .type = TYPE_U },
     { .parser = PARSE_REAL_LI, .name = "li3o",   .funct = LDI3O },
 
-    { .parser = PARSE_REAL_LI, .name = "li2s",   .funct = LDI2S },
-    { .parser = PARSE_REAL_LI, .name = "li2u",   .funct = LDI2U },
+    { .parser = PARSE_REAL_LI, .name = "li2s",   .funct = LDI2S, .type = TYPE_S },
+    { .parser = PARSE_REAL_LI, .name = "li2u",   .funct = LDI2U, .type = TYPE_U },
     { .parser = PARSE_REAL_LI, .name = "li2o",   .funct = LDI2O },
     
-    { .parser = PARSE_REAL_LI, .name = "li1s",   .funct = LDI1S },
-    { .parser = PARSE_REAL_LI, .name = "li1u",   .funct = LDI1U },
+    { .parser = PARSE_REAL_LI, .name = "li1s",   .funct = LDI1S, .type = TYPE_S },
+    { .parser = PARSE_REAL_LI, .name = "li1u",   .funct = LDI1U, .type = TYPE_U },
     { .parser = PARSE_REAL_LI, .name = "li1o",   .funct = LDI1O },
     
-    { .parser = PARSE_REAL_LI, .name = "li0s",   .funct = LDI0S },
-    { .parser = PARSE_REAL_LI, .name = "li0u",   .funct = LDI0U },
+    { .parser = PARSE_REAL_LI, .name = "li0s",   .funct = LDI0S, .type = TYPE_S },
+    { .parser = PARSE_REAL_LI, .name = "li0u",   .funct = LDI0U, .type = TYPE_U },
     { .parser = PARSE_REAL_LI, .name = "li0o",   .funct = LDI0O },
     
     { .parser = PARSE_REAL_LI, .name = "li0opc", .funct = LDI0OPC },
