@@ -387,7 +387,8 @@ struct insn {
         struct {
             uint32_t is_return : 1;
             uint32_t conditional : 1;
-            uint32_t funct : 20;
+            uint32_t funct : 18;
+            uint32_t vec : 2;
         } singleton;
 
         struct {

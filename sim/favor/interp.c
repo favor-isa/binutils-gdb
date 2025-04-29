@@ -317,17 +317,17 @@ sim_engine_run (SIM_DESC sd,
 
         switch(insn.p_opcode) {
             case POP_SINGLETON:
-                if(insn.misc.funct >= SNG_SETEQ && insn.misc.funct <= SNG_SETNEG) {
-                  int condition = insn.misc.funct - SNG_SETEQ;
+                if(insn.singleton.funct >= SNG_SETEQ && insn.singleton.funct <= SNG_SETNEG) {
+                  int condition = insn.singleton.funct - SNG_SETEQ;
                   #define FN(idx) cpu->c_codes[idx] = compute_condition(&cpu->status[idx], condition);
-                  APPLY_VEC_GENERIC(insn.misc, FN);
+                  APPLY_VEC_GENERIC(insn.singleton, FN);
                   #undef FN
 
                   break;
                 }
                 //TRACE_DECODE(scpu, "%p: %c cc_misc %#x %#08x", pc_addr, (insn.cc_misc.conditional ? 'c' : 'u'), insn.cc_misc., insn.cc_misc.);
 
-                switch(insn.misc.funct) {
+                switch(insn.singleton.funct) {
                     case SNG_HALT: {
                         TRACE_INSN(scpu, "%p: halt", pc_addr);
                         /* Done. sigrc param is exit code. Maybe put a0 there? */

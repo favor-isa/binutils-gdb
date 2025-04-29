@@ -149,6 +149,7 @@ favor_encode(struct insn insn) {
             value |= insn.singleton.conditional << 6;
             value |= (insn.singleton.funct & 0x1F) << 7;
             value |= (insn.singleton.funct >> 5)   << 17;
+            value |= insn.singleton.vec         << 30;
             // Note that the misc funct field is 0, but that's already done.
             break;
         }
@@ -340,6 +341,7 @@ favor_decode(uint32_t code) {
                 insn.singleton.funct =
                     ((code >>  7) & 0x1F) |
                     ((code >> 17) << 5);
+                insn.singleton.vec         = code >> 30;
             }
             else {
                 /* Non-singleton */
