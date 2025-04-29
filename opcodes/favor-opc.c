@@ -65,23 +65,23 @@ FAVOR_OP_TABLE_DEFINE(int3,
 )
 
 FAVOR_OP_TABLE_DEFINE(ld_imm, 
-    { .parser = PARSE_REAL_LI, .name = "ldi3u",   .funct = LDI3U },
-    { .parser = PARSE_REAL_LI, .name = "ldi3o",   .funct = LDI3O },
+    { .parser = PARSE_REAL_LI, .name = "li3u",   .funct = LDI3U },
+    { .parser = PARSE_REAL_LI, .name = "li3o",   .funct = LDI3O },
 
-    { .parser = PARSE_REAL_LI, .name = "ldi2s",   .funct = LDI2S },
-    { .parser = PARSE_REAL_LI, .name = "ldi2u",   .funct = LDI2U },
-    { .parser = PARSE_REAL_LI, .name = "ldi2o",   .funct = LDI2O },
+    { .parser = PARSE_REAL_LI, .name = "li2s",   .funct = LDI2S },
+    { .parser = PARSE_REAL_LI, .name = "li2u",   .funct = LDI2U },
+    { .parser = PARSE_REAL_LI, .name = "li2o",   .funct = LDI2O },
     
-    { .parser = PARSE_REAL_LI, .name = "ldi1s",   .funct = LDI1S },
-    { .parser = PARSE_REAL_LI, .name = "ldi1u",   .funct = LDI1U },
-    { .parser = PARSE_REAL_LI, .name = "ldi1o",   .funct = LDI1O },
+    { .parser = PARSE_REAL_LI, .name = "li1s",   .funct = LDI1S },
+    { .parser = PARSE_REAL_LI, .name = "li1u",   .funct = LDI1U },
+    { .parser = PARSE_REAL_LI, .name = "li1o",   .funct = LDI1O },
     
-    { .parser = PARSE_REAL_LI, .name = "ldi0s",   .funct = LDI0S },
-    { .parser = PARSE_REAL_LI, .name = "ldi0u",   .funct = LDI0U },
-    { .parser = PARSE_REAL_LI, .name = "ldi0o",   .funct = LDI0O },
+    { .parser = PARSE_REAL_LI, .name = "li0s",   .funct = LDI0S },
+    { .parser = PARSE_REAL_LI, .name = "li0u",   .funct = LDI0U },
+    { .parser = PARSE_REAL_LI, .name = "li0o",   .funct = LDI0O },
     
-    { .parser = PARSE_REAL_LI, .name = "ldi0opc", .funct = LDI0OPC },
-    { .parser = PARSE_REAL_LI, .name = "ldi0s32", .funct = LDI0S32 },
+    { .parser = PARSE_REAL_LI, .name = "li0opc", .funct = LDI0OPC },
+    { .parser = PARSE_REAL_LI, .name = "li0s32", .funct = LDI0S32 },
 )
 
 #define REG(r) .reg = r, .reg_mask = (r & 0x1F), .f = (r >> 5)
