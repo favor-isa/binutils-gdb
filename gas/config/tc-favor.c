@@ -137,18 +137,44 @@ struct ty {
     uint32_t type;
 };
 
+struct ty_spec {
+    bool u;
+    bool s;
+    bool f;
+    bool r;
+};
+
+static struct ty_spec spec_num = {
+    .u = true,
+    .s = true,
+    .f = true,
+    .r = false
+};
+
+static struct ty_spec spec_li = {
+    .u = true,
+    .s = false,
+    .f = true,
+    .r = true,
+};
+
 static char*
-parse_ty(char *str, struct ty *out) {
+parse_ty(char *str, struct ty *out, struct ty_spec *spec) {
     char *num_start, *num_end;
     if(*str != '.') { as_bad("Expected type specifier."); return str; }
     str++;
 
-    switch(*str) { \
-        case 'u': out->u = 1; out->f = 0; out->type = TYPE_U; break;
-        case 's': out->u = 0; out->f = 0; out->type = TYPE_S; break;
-        case 'f': out->u = 0; out->f = 1; out->type = TYPE_F; break;
+#define CHECK(x) do {\
+    if(!spec->x) { as_bad("Operation does not support type specifier %c.", *str); return str; } \
+} while(0)
+    switch(*str) {
+        case 'u': CHECK(u); out->u = 1; out->f = 0; out->type = TYPE_U; break;
+        case 's': CHECK(s); out->u = 0; out->f = 0; out->type = TYPE_S; break;
+        case 'f': CHECK(f); out->u = 0; out->f = 1; out->type = TYPE_F; break;
+        case 'r': CHECK(r); out->u = 1; out->f = 0; out->type = TYPE_R; break;
         default: as_bad("Unknown type specifier %c.", *str); return str;
     }
+#undef CHECK
 
     str++;
 
@@ -350,8 +376,8 @@ md_assemble(char *str) {
     if(*str == '?') { conditional = 1; str++; } \
 } while(0)
 
-#define PARSE_TY() do { \
-    str = parse_ty(str, &ty); \
+#define PARSE_TY(spec) do { \
+    str = parse_ty(str, &ty, &spec); \
 } while(0)
 
 #define TY_FUNCT() (ty.f ? op_info->funct_f : (ty.u ? op_info->funct_u : op_info->funct_s))
@@ -371,7 +397,7 @@ md_assemble(char *str) {
                 break;
             }
             case PARSE_3ARG: {
-                PARSE_TY();
+                PARSE_TY(spec_num);
                 PARSE_CONDITIONAL();
 
                 op_info = lookup_type(op_info, ty.type);
@@ -406,7 +432,7 @@ md_assemble(char *str) {
                 break;
             }
             case PARSE_PSUEDO_LI: {
-                PARSE_TY();
+                PARSE_TY(spec_li);
                 PARSE_CONDITIONAL();
                 //if(!ty.f && !ty.u) { as_bad("Use an unsigned load instead"); return; }
 
@@ -449,7 +475,7 @@ md_assemble(char *str) {
                 // This will be replaced by md_convert_frag. We need to provide
                 // it with the correct starting info though. Ferry the size through
                 // the imm field.
-                insn = mk_ld_imm(conditional, dst, ty.sz, ty.f, ty.u ? LDI0U : LDI0S);
+                insn = mk_ld_imm(conditional, dst, ty.sz, ty.f, ty.type);
                 output(where, favor_encode(insn));
                 //s
                 //insn = mk_ld_imm(conditional, dst, 0, ty.f, ty.vec, LS_IMM_LD64);
@@ -497,7 +523,6 @@ md_show_usage(FILE *stream ATTRIBUTE_UNUSED) { }
 struct li_info {
     bool is_pcrel;
     bool is_relocation;
-    bool is_signed;
     bool has_written;
     bool do_output;
     uint64_t value;
@@ -704,14 +729,20 @@ do_convert_frag(fragS *fragp, bool do_output) {
     size = insn.ld_imm.imm;
     // Reset the immediate back to 0 after reading the size.
     insn.ld_imm.imm = 0;
-    li.is_signed = insn.ld_imm.funct == LDI0S;
+    int type = insn.ld_imm.funct;
+    insn.ld_imm.funct = 0;
 
     if(li.is_pcrel) {
-        if(!li.is_signed) {
-            if(do_output) as_bad_where(fragp->fr_file, fragp->fr_line, "Expected signed load for pc-rel load.");
+        if(type != TYPE_R) {
+            if(do_output) as_bad_where(fragp->fr_file, fragp->fr_line, "Expected relative load for pc-relative operand.");
         }
         if(size < 2) {
             if(do_output) as_bad_where(fragp->fr_file, fragp->fr_line, "Expected 32 or 64 bit load for pc-rel load.");
+        }
+    }
+    else {
+        if(type != TYPE_U && type != TYPE_F) {
+            if(do_output) as_bad_where(fragp->fr_file, fragp->fr_line, "Expected unsigned or floating-point load for absolute operand.");
         }
     }
     

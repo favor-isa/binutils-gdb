@@ -28,7 +28,8 @@ enum favor_op_type {
     TYPE_NONE,
     TYPE_U,
     TYPE_S,
-    TYPE_F
+    TYPE_F,
+    TYPE_R,
 };
 
 struct favor_reg_info {
