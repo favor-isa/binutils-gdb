@@ -613,6 +613,8 @@ emit_li_info(struct li_info *li, uint64_t shift) {
     }
     output(li->where, favor_encode(*li->insn));
 
+    li->has_written = true;
+
     li->where += 4;
 }
 
