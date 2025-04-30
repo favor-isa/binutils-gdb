@@ -29,18 +29,18 @@ subdir = po
 DESTDIR =
 
 INSTALL = /usr/bin/install -c
-INSTALL_DATA = ${INSTALL} -m 644
+INSTALL_DATA = /usr/bin/install -c -m 644
 MKINSTALLDIRS = $(top_builddir)/./../mkinstalldirs
 
 CC = gcc
-GENCAT = gencat
+GENCAT = 
 GMSGFMT = PATH=../src:$$PATH :
 MSGFMT = :
 XGETTEXT = PATH=../src:$$PATH :
 MSGMERGE = PATH=../src:$$PATH msgmerge
 
 DEFS = -DHAVE_CONFIG_H
-CFLAGS = -g -O2
+CFLAGS = -g -O2    
 CPPFLAGS = 
 
 INCLUDES = -I.. -I$(top_srcdir)/intl
@@ -408,9 +408,9 @@ BLD-POTFILES = \
 	../ez8001.c \
 	../ez8002.c 
 
-CATALOGS =  bg.gmo da.gmo de.gmo es.gmo fi.gmo fr.gmo ga.gmo id.gmo it.gmo ja.gmo ka.gmo pt_BR.gmo ro.gmo ru.gmo sr.gmo sv.gmo tr.gmo uk.gmo vi.gmo zh_CN.gmo zh_TW.gmo
-CATOBJEXT = .gmo
-INSTOBJEXT = .mo
+CATALOGS = 
+CATOBJEXT = 
+INSTOBJEXT = 
 
 .SUFFIXES:
 .SUFFIXES: .c .o .po .pox .gmo .mo .msg .cat
@@ -434,7 +434,7 @@ INSTOBJEXT = .mo
 	  && rm -f $@ && $(GENCAT) $@ $*.msg
 
 
-all: all-yes
+all: all-no
 
 all-yes: $(CATALOGS) # $(PACKAGE).pot
 all-no:
@@ -474,7 +474,7 @@ install-html:
 install-dvi:
 install-pdf:
 install-ps:
-install-data: install-data-yes
+install-data: install-data-no
 install-data-no: all
 install-data-yes: all
 	if test -r $(MKINSTALLDIRS); then \

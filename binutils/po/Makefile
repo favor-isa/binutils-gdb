@@ -33,7 +33,7 @@ INSTALL_DATA = /usr/bin/install -c -m 644
 MKINSTALLDIRS = $(top_builddir)/./../mkinstalldirs
 
 CC = gcc
-GENCAT = gencat
+GENCAT = 
 GMSGFMT = PATH=../src:$$PATH :
 MSGFMT = :
 XGETTEXT = PATH=../src:$$PATH :
@@ -131,9 +131,9 @@ POTFILES = \
      ../winduni.h \
      ../wrstabs.c
 
-CATALOGS =  bg.gmo ca.gmo da.gmo es.gmo fi.gmo fr.gmo hr.gmo id.gmo it.gmo ja.gmo pt.gmo ro.gmo ru.gmo rw.gmo sk.gmo sr.gmo sv.gmo tr.gmo uk.gmo vi.gmo zh_CN.gmo zh_TW.gmo
-CATOBJEXT = .gmo
-INSTOBJEXT = .mo
+CATALOGS = 
+CATOBJEXT = 
+INSTOBJEXT = 
 
 .SUFFIXES:
 .SUFFIXES: .c .o .po .pox .gmo .mo .msg .cat
@@ -157,7 +157,7 @@ INSTOBJEXT = .mo
 	  && rm -f $@ && $(GENCAT) $@ $*.msg
 
 
-all: all-yes
+all: all-no
 
 all-yes: $(CATALOGS) # $(PACKAGE).pot
 all-no:
@@ -192,7 +192,7 @@ install-html:
 install-dvi:
 install-pdf:
 install-ps:
-install-data: install-data-yes
+install-data: install-data-no
 install-data-no: all
 install-data-yes: all
 	if test -r $(MKINSTALLDIRS); then \

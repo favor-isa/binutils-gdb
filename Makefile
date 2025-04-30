@@ -90,7 +90,7 @@ MAINTAINER_MODE_TRUE = #
 # -------------------------------------------------
 
 # The gcc driver likes to know the arguments it was configured with.
-TOPLEVEL_CONFIGURE_ARGUMENTS=./configure --target=favor-elf --disable-gdb --prefix=/home/emdash/favor-isa/root
+TOPLEVEL_CONFIGURE_ARGUMENTS=./configure --target=favor-elf --disable-nls --prefix=/home/emdash/favor-isa/root
 
 tooldir = ${exec_prefix}/favor-elf
 build_tooldir = ${exec_prefix}/favor-elf
@@ -111,7 +111,7 @@ host_shared = no
 BUILD_SUBDIR = build-x86_64-pc-linux-gnu
 # This is set by the configure script to the arguments to use when configuring
 # directories built for the build system.
-BUILD_CONFIGARGS =  --cache-file=./config.cache '--disable-gdb' '--prefix=/home/emdash/favor-isa/root' --program-transform-name='s&^&favor-elf-&' --disable-option-checking --disable-year2038 --with-build-subdir="$(BUILD_SUBDIR)"
+BUILD_CONFIGARGS =  --cache-file=./config.cache '--disable-nls' '--prefix=/home/emdash/favor-isa/root' --program-transform-name='s&^&favor-elf-&' --disable-option-checking --disable-year2038 --with-build-subdir="$(BUILD_SUBDIR)"
 
 # Linker flags to use on the host, for stage1 or when not
 # bootstrapping.
@@ -180,7 +180,7 @@ SUBDIRS =  libiberty opcodes bfd readline libbacktrace libdecnumber libctf libsf
 TARGET_CONFIGDIRS = 
 # This is set by the configure script to the arguments to use when configuring
 # directories built for the host system.
-HOST_CONFIGARGS =  --cache-file=./config.cache  --with-gnu-as --with-gnu-ld --with-system-zlib '--disable-gdb' '--prefix=/home/emdash/favor-isa/root' --program-transform-name='s&^&favor-elf-&' --disable-option-checking --disable-year2038
+HOST_CONFIGARGS =  --cache-file=./config.cache  --with-gnu-as --with-gnu-ld --with-system-zlib '--disable-nls' '--prefix=/home/emdash/favor-isa/root' --program-transform-name='s&^&favor-elf-&' --disable-option-checking --disable-year2038
 # Host programs are put under this directory, which is . except if building
 # with srcdir=..
 HOST_SUBDIR = .
@@ -270,7 +270,7 @@ POSTSTAGE1_HOST_EXPORTS = \
 TARGET_SUBDIR = favor-elf
 # This is set by the configure script to the arguments to use when configuring
 # directories built for the target.
-TARGET_CONFIGARGS = --cache-file=./config.cache --enable-multilib --with-cross-host=x86_64-pc-linux-gnu   '--disable-gdb' '--prefix=/home/emdash/favor-isa/root' --program-transform-name='s&^&favor-elf-&' --disable-option-checking --disable-year2038 --with-target-subdir="$(TARGET_SUBDIR)"
+TARGET_CONFIGARGS = --cache-file=./config.cache --enable-multilib --with-cross-host=x86_64-pc-linux-gnu   '--disable-nls' '--prefix=/home/emdash/favor-isa/root' --program-transform-name='s&^&favor-elf-&' --disable-option-checking --disable-year2038 --with-target-subdir="$(TARGET_SUBDIR)"
 # This is the list of variables to export in the environment when
 # configuring subdirectories for the target system.
 BASE_TARGET_EXPORTS = \

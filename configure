@@ -3789,9 +3789,9 @@ esac
 
 case "${target}" in
   favor-*-*)
-      noconfigdirs="$noconfigdirs gdb"
-      noconfigdirs="$noconfigdirs gprof"
-      noconfigdirs="$noconfigdirs zlib"
+    noconfigdirs="$noconfigdirs gdb"
+    noconfigdirs="$noconfigdirs gprof"
+    noconfigdirs="$noconfigdirs zlib"
     ;;
   *-*-chorusos)
     ;;

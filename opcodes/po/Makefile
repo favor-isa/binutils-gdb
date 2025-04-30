@@ -33,7 +33,7 @@ INSTALL_DATA = /usr/bin/install -c -m 644
 MKINSTALLDIRS = $(top_builddir)/./../mkinstalldirs
 
 CC = gcc
-GENCAT = gencat
+GENCAT = 
 GMSGFMT = PATH=../src:$$PATH :
 MSGFMT = :
 XGETTEXT = PATH=../src:$$PATH :
@@ -272,9 +272,9 @@ POTFILES = \
      ../z8k-dis.c \
      ../z8k-opc.h
 
-CATALOGS =  da.gmo de.gmo es.gmo fi.gmo fr.gmo ga.gmo id.gmo it.gmo nl.gmo pt_BR.gmo ro.gmo sr.gmo sv.gmo tr.gmo uk.gmo vi.gmo zh_CN.gmo
-CATOBJEXT = .gmo
-INSTOBJEXT = .mo
+CATALOGS = 
+CATOBJEXT = 
+INSTOBJEXT = 
 
 .SUFFIXES:
 .SUFFIXES: .c .o .po .pox .gmo .mo .msg .cat
@@ -298,7 +298,7 @@ INSTOBJEXT = .mo
 	  && rm -f $@ && $(GENCAT) $@ $*.msg
 
 
-all: all-yes
+all: all-no
 
 all-yes: $(CATALOGS) # $(PACKAGE).pot
 all-no:
@@ -333,7 +333,7 @@ install-html:
 install-dvi:
 install-pdf:
 install-ps:
-install-data: install-data-yes
+install-data: install-data-no
 install-data-no: all
 install-data-yes: all
 	if test -r $(MKINSTALLDIRS); then \
