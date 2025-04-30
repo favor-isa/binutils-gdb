@@ -194,8 +194,20 @@ static uint64_t
 ld_imm(uint64_t in, uint32_t funct, uint64_t imm, uint64_t pc) {
   switch(funct) {
     case LDI3U:   return       (imm << 48ULL); // replaces the value
+    case LDI2U:   return       (imm << 32ULL);
+    case LDI1U:   return       (imm << 16ULL);
+    case LDI0U:   return       (imm <<  0ULL);
+
+    case LDI2S:   return       (imm << 32ULL) | 0xFFFF000000000000ULL;
+    case LDI1S:   return       (imm << 16ULL) | 0xFFFFFFFF00000000ULL;
+    case LDI0S:   return       (imm <<  0ULL) | 0xFFFFFFFFFFFF0000ULL;
+    case LDI0S32: return       (imm <<  0ULL) | 0x00000000FFFF0000ULL;
+
+    // Note to self: Do we even need 3O? I guess it has uses as an or operator.
+    case LDI3O:   return (in | (imm << 48ULL)); 
     case LDI2O:   return (in | (imm << 32ULL)); 
     case LDI1O:   return (in | (imm << 16ULL));
+    case LDI0O:   return (in | (imm <<  0ULL));
     case LDI0OPC: return (in | (imm <<  0ULL)) + pc;
     default: return in; // TODO: fault?
   }
