@@ -682,6 +682,8 @@ do_convert_frag(fragS *fragp, bool do_output) {
     // rewrite the funct field.
     gas_assert(insn.p_opcode == POP_LD_IMM);
     size = insn.ld_imm.imm;
+    // Reset the immediate back to 0 after reading the size.
+    insn.ld_imm.imm = 0;
     li.is_signed = insn.ld_imm.funct == LDI0S;
 
     if(li.is_pcrel) {
@@ -893,7 +895,6 @@ md_apply_fix(fixS *fixP ATTRIBUTE_UNUSED, valueT *valP ATTRIBUTE_UNUSED, segT se
 
         // TODO: CUstom relocation
         uint32_t insn = get(buf);
-        printf("got relocation from buf: %p -> %x | %x\n", buf, insn, *(uint32_t*)(buf));
         insn |= (uint32_t)((val >> shift) & 0xFFFF) << 12;
         output(buf, insn);
         if(fixP->fx_addsy == NULL) {
