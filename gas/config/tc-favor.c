@@ -507,7 +507,8 @@ struct li_info {
     expressionS exp;
     char *where;
 
-    int lhs_truncation;
+    int lhs_trunc_now;
+    int lhs_trunc_prev;
 };
 
 enum {
@@ -533,9 +534,9 @@ may_truncate_li_lhs(struct li_info *li, uint64_t shift, bool is_msh) {
     if(li->is_relocation) return false;
 
     int truncation = compute_li_truncation(li, shift);
-    int prev = li->lhs_truncation;
+    li->lhs_trunc_prev = li->lhs_trunc_now;
     /* Always reset lhs_truncation to NONE unless we actually truncate. */
-    li->lhs_truncation = LI_TRUNC_NONE;
+    li->lhs_trunc_now = LI_TRUNC_NONE;
     
     if(truncation == LI_TRUNC_ALL0) {
         if(shift == 0 && !li->has_written) {
@@ -551,8 +552,8 @@ may_truncate_li_lhs(struct li_info *li, uint64_t shift, bool is_msh) {
         // in that case, don't update the truncation.
         //
         // So only update it 1) if we are msh, or 2) if the previous was also ALL0.
-        if(is_msh || prev == LI_TRUNC_ALL0) {
-            li->lhs_truncation = truncation;
+        if(is_msh || li->lhs_trunc_prev == LI_TRUNC_ALL0) {
+            li->lhs_trunc_now = truncation;
         }
         return true;
     }
@@ -563,7 +564,7 @@ may_truncate_li_lhs(struct li_info *li, uint64_t shift, bool is_msh) {
         // For the most significant halfword, we can always truncate.
         // Otherwise, we have to have truncated an 0xFFFF before so that we
         // can use the S instruction.
-        if(prev != LI_TRUNC_ALL1 && !is_msh) return false;
+        if(li->lhs_trunc_prev != LI_TRUNC_ALL1 && !is_msh) return false;
 
         // Now, we can only truncate to S32 if the next bit is also a 1.
         // 
@@ -575,7 +576,7 @@ may_truncate_li_lhs(struct li_info *li, uint64_t shift, bool is_msh) {
         // (for 32-bit->64 bit relocations, we would have to also update
         // the instruction depending on the sign bit).
         if((li->value >> (shift - 1)) & 1) {
-            li->lhs_truncation = truncation;
+            li->lhs_trunc_now = truncation;
             return true;
         } 
     }
@@ -622,10 +623,10 @@ li_compute_funct(struct li_info *li, bool is_msh, uint32_t u, uint32_t s, uint32
 
     // If we are truncating the LHS to be ALL1 or ALL0, then we need to use
     // the appropriate sign-extending instruction.
-    if(li->lhs_truncation == LI_TRUNC_ALL1) {
+    if(li->lhs_trunc_prev == LI_TRUNC_ALL1) {
         return s;
     }
-    if(li->lhs_truncation == LI_TRUNC_ALL0) {
+    if(li->lhs_trunc_prev == LI_TRUNC_ALL0) {
         return u;
     }
 
@@ -648,7 +649,8 @@ md_convert_frag (bfd *abfd ATTRIBUTE_UNUSED, segT asec ATTRIBUTE_UNUSED,
 
     li.value = (uint64_t)((int64_t)fragp->fr_offset);
 
-    li.lhs_truncation = LI_TRUNC_NONE;
+    li.lhs_trunc_now = LI_TRUNC_NONE;
+    li.lhs_trunc_prev = LI_TRUNC_NONE;
     li.has_written = false;
 
     if(fragp->fr_symbol) {
