@@ -291,22 +291,38 @@ enum float2 {
     F2_SWIZZLE,
 };
 
+/**
+ * Opcodes for the li (load immediate) instructions.
+ * 
+ * These are organized such that if we have a U and S version of an
+ * instruction, then the S version equals the U version | 1 (in the funct
+ * field).
+ * 
+ * This allows us to easily implement relocations for these, as well as in
+ * theory could be convenient in hardware.
+ */
 enum ld_imm {
-    LDI3U,
-    LDI3O,
-
-    LDI2S,
-    LDI2U,
-    LDI2O,
-
-    LDI1S,
-    LDI1U,
-    LDI1O,
-
-    LDI0S,
     LDI0U,
+    LDI0S,
+
     LDI0O,
     LDI0OPC,
+
+    LDI1U,
+    LDI1S,
+
+    LDI1O,
+    LDI_RES0,
+
+    LDI2U,
+    LDI2S,
+
+    LDI2O,
+    LDI_RES1,
+
+    LDI3U,
+    LDI_RES2,
+    LDI3O,
     LDI0S32,
 };
 
