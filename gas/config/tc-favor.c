@@ -499,6 +499,7 @@ struct li_info {
     bool is_relocation;
     bool is_signed;
     bool has_written;
+    bool do_output;
     uint64_t value;
 
     struct insn *insn;
@@ -509,6 +510,8 @@ struct li_info {
 
     int lhs_trunc_now;
     int lhs_trunc_prev;
+
+    int bytes_written;
 };
 
 enum {
@@ -578,6 +581,11 @@ may_truncate_li_lhs(struct li_info *li, uint64_t shift, bool is_msh) {
 
 static void
 emit_li_info(struct li_info *li, uint64_t shift) {
+    /* Track this if we're not actually outputting. */
+    li->bytes_written += 4;
+
+    if(!li->do_output) return;
+
     enum bfd_reloc_code_real reloc = BFD_RELOC_FAVOR_IMM16_PCREL;
     
     switch(shift) {
@@ -628,10 +636,8 @@ li_compute_funct(struct li_info *li, bool is_msh, uint32_t u, uint32_t s, uint32
     return o;
 }
 
-void
-md_convert_frag (bfd *abfd ATTRIBUTE_UNUSED, segT asec ATTRIBUTE_UNUSED,
-		 fragS *fragp)
-{
+static int
+do_convert_frag(fragS *fragp, bool do_output) {
     struct insn insn;
     struct li_info li = {0};
     uint32_t size = 0;
@@ -647,6 +653,7 @@ md_convert_frag (bfd *abfd ATTRIBUTE_UNUSED, segT asec ATTRIBUTE_UNUSED,
     li.lhs_trunc_now = LI_TRUNC_NONE;
     li.lhs_trunc_prev = LI_TRUNC_NONE;
     li.has_written = false;
+    li.do_output = do_output;
 
     if(fragp->fr_symbol) {
         li.value += S_GET_VALUE(fragp->fr_symbol);
@@ -663,7 +670,6 @@ md_convert_frag (bfd *abfd ATTRIBUTE_UNUSED, segT asec ATTRIBUTE_UNUSED,
         li.is_pcrel = false;
         li.is_relocation = false;
     }
-    printf("convert frag: sym value = %lu\n", li.value);
     
     li.exp.X_add_number = fragp->fr_offset;
     li.exp.X_add_symbol = fragp->fr_symbol;
@@ -680,10 +686,10 @@ md_convert_frag (bfd *abfd ATTRIBUTE_UNUSED, segT asec ATTRIBUTE_UNUSED,
 
     if(li.is_pcrel) {
         if(!li.is_signed) {
-            as_bad_where(fragp->fr_file, fragp->fr_line, "Expected signed load for pc-rel load.");
+            if(do_output) as_bad_where(fragp->fr_file, fragp->fr_line, "Expected signed load for pc-rel load.");
         }
         if(size < 2) {
-            as_bad_where(fragp->fr_file, fragp->fr_line, "Expected 32 or 64 bit load for pc-rel load.");
+            if(do_output) as_bad_where(fragp->fr_file, fragp->fr_line, "Expected 32 or 64 bit load for pc-rel load.");
         }
     }
     
@@ -720,7 +726,7 @@ md_convert_frag (bfd *abfd ATTRIBUTE_UNUSED, segT asec ATTRIBUTE_UNUSED,
             goto sz_16;
         }
         default: {
-            as_bad_where(fragp->fr_file, fragp->fr_line, "Unknown size for load.");
+            if(do_output) as_bad_where(fragp->fr_file, fragp->fr_line, "Unknown size for load.");
         }
     }
 
@@ -742,13 +748,12 @@ sz_32:
         insn.ld_imm.funct = li_compute_funct(&li, is_msh, LDI1U, LDI1S, LDI1O);
 
         if(li.is_relocation && li.is_pcrel && is_msh) {
-            fix_new_exp(li.fragp,
+            if(do_output) fix_new_exp(li.fragp,
                 (li.where - li.fragp->fr_literal),
                 4,
                 &li.exp,
                 true,
                 BFD_RELOC_FAVOR_BIT32_LI_PCREL);
-            printf("emit bit32 li pcrel\n");
         }
 
         emit_li_info(&li, 16);
@@ -774,18 +779,56 @@ sz_16:
         emit_li_info(&li, 0);
     }
 
-    valueT old = fragp->fr_fix;
-    fragp->fr_fix = (uintptr_t)li.where - (uintptr_t)fragp->fr_literal;
-    printf("grew by: %lu octets", (fragp->fr_fix - old));
+
+
+    //valueT old = fragp->fr_fix;
+    if(do_output) {
+        fragp->fr_fix = (uintptr_t)li.where - (uintptr_t)fragp->fr_literal;
+        printf("final size: %lu\n", fragp->fr_fix);
+    }
+    return li.bytes_written;
+}
+
+void
+md_convert_frag (bfd *abfd ATTRIBUTE_UNUSED, segT asec ATTRIBUTE_UNUSED,
+		 fragS *fragp)
+{
+    if(fragp->fr_subtype != RELAX_LD) {
+        as_bad_where(fragp->fr_file, fragp->fr_line, "Unknown machine-dependent relaxation.");
+    }
+    do_convert_frag(fragp, true);
 
     if(fragp->fr_next) {
-        fragp->fr_next->fr_address = fragp->fr_address + fragp->fr_fix;
+        printf("address of next: %lx -> %lx (%lu)\n",
+            fragp->fr_address,
+            fragp->fr_next->fr_address,
+            (uintptr_t)fragp->fr_next->fr_address - (uintptr_t)fragp->fr_address);
+        //fragp->fr_next->fr_address = fragp->fr_address + fragp->fr_fix;
     }
 }
 
+/**
+ * So.
+ * 
+ * Apparently.
+ * 
+ * By "estimite size" they really mean "give us the exact size."
+ * 
+ * The easiest way to do this for our li logic is to just run the whole logic
+ * again. I think this shouldn't actually be too bad in practice, as it's overall
+ * pretty straightforward. But man does that seem kind of rude though.
+ * 
+ * It also might mean that we can't optimize certain kinds of labels to be
+ * small? In particular, anything that would move if we were to shrink is
+ * a no-no apparently. So probably if the label is still unresolved now
+ * determines whether we can resolve it absolutely...?
+ */
 int
 md_estimate_size_before_relax (fragS* fragp, segT) {
-    return fragp->fr_fix + 16; /* Worst case...? */
+    if(fragp->fr_subtype != RELAX_LD) return 0;
+
+    printf("size estimation: %lu\n", fragp->fr_fix + do_convert_frag(fragp, false) - 4);
+    return do_convert_frag(fragp, false) - 4;
 }
 
 static uint32_t
