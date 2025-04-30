@@ -580,31 +580,51 @@ may_truncate_li_lhs(struct li_info *li, uint64_t shift, bool is_msh) {
 }
 
 static void
-emit_li_info(struct li_info *li, uint64_t shift) {
+emit_li_info(struct li_info *li, uint64_t shift, bool is_msb) {
     /* Track this if we're not actually outputting. */
     li->bytes_written += 4;
 
     if(!li->do_output) return;
 
     enum bfd_reloc_code_real reloc = BFD_RELOC_FAVOR_IMM16_PCREL;
+    offsetT reloc_add = 0;
     
     switch(shift) {
-        case 0:  reloc = BFD_RELOC_FAVOR_IMM16_PCREL; break;
-        case 16: reloc = BFD_RELOC_FAVOR_IMM32_PCREL; break;
-        case 32: reloc = BFD_RELOC_FAVOR_IMM48_PCREL; break;
-        case 48: reloc = BFD_RELOC_FAVOR_IMM64_PCREL; break;
+        case 0:  reloc = BFD_RELOC_FAVOR_IMM16_PCREL; reloc_add = -0; break;
+        case 16: reloc = BFD_RELOC_FAVOR_IMM32_PCREL; reloc_add = -4; break;
+        case 32: reloc = BFD_RELOC_FAVOR_IMM48_PCREL; reloc_add = -8; break;
+        case 48: reloc = BFD_RELOC_FAVOR_IMM64_PCREL; reloc_add = -12; break;
     }
 
     if(li->is_relocation) {
         if(!li->is_pcrel) {
             as_bad_where(li->fragp->fr_file, li->fragp->fr_line, "Non-pcrel relocations are not supported yet.");
         }
+
+        /* Create a clone of the expression, but with a slightly modified offset.
+         *
+         * Essentially, this makes sure all the relocations occur at exactly
+         * the same location. */
+        expressionS dup = li->exp;
+        dup.X_add_number += reloc_add;
+
         fix_new_exp (li->fragp,
             (li->where - li->fragp->fr_literal),
             4,
-            &li->exp,
+            &dup,
             true,
             reloc);
+
+        /* For a 32-bit load, we also need a relocation that will change between
+         * li1u and li2s as appropriate, which also needs the new expression. */
+        if(shift == 16 && is_msb) {
+            fix_new_exp(li->fragp,
+                (li->where - li->fragp->fr_literal),
+                4,
+                &dup,
+                true,
+                BFD_RELOC_FAVOR_BIT32_LI_PCREL);
+        }
     }
     else {
         // If we aren't relocating the value, we just emit it directly.
@@ -736,29 +756,19 @@ do_convert_frag(fragS *fragp, bool do_output) {
 
 sz_64:
     if(!may_truncate_li_lhs(&li, 48, is_msh)) {
-        emit_li_info(&li, 48);
+        emit_li_info(&li, 48, is_msh);
     }
     is_msh = false;
 
     if(!may_truncate_li_lhs(&li, 32, is_msh)) {
         insn.ld_imm.funct = li_compute_funct(&li, is_msh, LDI2U, LDI2S, LDI2O);
-        emit_li_info(&li, 32);
+        emit_li_info(&li, 32, is_msh);
     }
 
 sz_32:
     if(!may_truncate_li_lhs(&li, 16, is_msh)) {
         insn.ld_imm.funct = li_compute_funct(&li, is_msh, LDI1U, LDI1S, LDI1O);
-
-        if(li.is_relocation && li.is_pcrel && is_msh) {
-            if(do_output) fix_new_exp(li.fragp,
-                (li.where - li.fragp->fr_literal),
-                4,
-                &li.exp,
-                true,
-                BFD_RELOC_FAVOR_BIT32_LI_PCREL);
-        }
-
-        emit_li_info(&li, 16);
+        emit_li_info(&li, 16, is_msh);
     }
     is_msh = false;
 
@@ -778,7 +788,7 @@ sz_16:
                 insn.ld_imm.funct = LDI0S32;
             }
         }
-        emit_li_info(&li, 0);
+        emit_li_info(&li, 0, is_msh);
     }
 
 
