@@ -36,6 +36,9 @@ favor_elf_howto_table[] = {
         0x0FFFFFC0,
         true),
 
+    // TODO: For all these relocations, how do we correctly handle the PC
+    // offset being slightly different for each of the ops we generate? Do we
+    // handle that by adding it manually in the expression generation in tc-favor?
     HOWTO(R_FAVOR_IMM16_PCREL,
         0, // no shift
         4, // 4 bytes
