@@ -16,7 +16,7 @@ static htab_t opcode_hash;
 static htab_t reg_hash;
 
 enum relax_types {
-    RELAX_LD,
+    RELAX_LD = 1,
 };
 
 void
@@ -786,14 +786,29 @@ sz_16:
         fragp->fr_fix = (uintptr_t)li.where - (uintptr_t)fragp->fr_literal;
         printf("final size: %lu\n", fragp->fr_fix);
     }
-    return li.bytes_written;
+    return li.bytes_written - 4;
+}
+
+// TODO:
+// Maybe instead of the estimate_size_before_relax hack, we should just implement
+// md_relax_frag?
+
+int
+favor_relax_frag(segT asec ATTRIBUTE_UNUSED, fragS *fragp, int stretch ATTRIBUTE_UNUSED) {
+    if(fragp->fr_subtype == RELAX_LD) {
+        fragp->fr_subtype = 0;
+        return do_convert_frag(fragp, true);
+    }
+    else {
+        return 0;
+    }
 }
 
 void
 md_convert_frag (bfd *abfd ATTRIBUTE_UNUSED, segT asec ATTRIBUTE_UNUSED,
-		 fragS *fragp)
+		 fragS *fragp ATTRIBUTE_UNUSED)
 {
-    if(fragp->fr_subtype != RELAX_LD) {
+    /*if(fragp->fr_subtype != RELAX_LD) {
         as_bad_where(fragp->fr_file, fragp->fr_line, "Unknown machine-dependent relaxation.");
     }
     do_convert_frag(fragp, true);
@@ -804,7 +819,7 @@ md_convert_frag (bfd *abfd ATTRIBUTE_UNUSED, segT asec ATTRIBUTE_UNUSED,
             fragp->fr_next->fr_address,
             (uintptr_t)fragp->fr_next->fr_address - (uintptr_t)fragp->fr_address);
         //fragp->fr_next->fr_address = fragp->fr_address + fragp->fr_fix;
-    }
+    }*/
 }
 
 /**
@@ -827,8 +842,9 @@ int
 md_estimate_size_before_relax (fragS* fragp, segT) {
     if(fragp->fr_subtype != RELAX_LD) return 0;
 
-    printf("size estimation: %lu\n", fragp->fr_fix + do_convert_frag(fragp, false) - 4);
-    return do_convert_frag(fragp, false) - 4;
+    //printf("size estimation: %lu\n", fragp->fr_fix + do_convert_frag(fragp, false) - 4);
+    //return do_convert_frag(fragp, false) - 4;
+    return 12;
 }
 
 static uint32_t

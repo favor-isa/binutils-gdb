@@ -20,4 +20,8 @@ static inline int _favor_fatal(const char *str) {
 #define md_pcrel_from(FIX) 						\
 	((FIX)->fx_where + (FIX)->fx_frag->fr_address)
 
+#define md_relax_frag(SEG, FRAGP, STRETCH) favor_relax_frag(SEG, FRAGP, STRETCH)
+
+int favor_relax_frag(segT, fragS*, int);
+
 #define md_section_align(SEGMENT, SIZE)     (SIZE)
