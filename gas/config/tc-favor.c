@@ -751,6 +751,8 @@ sz_32:
 sz_16:
     if(!may_truncate_li_lhs(&li, 0, is_msh)) {
         if(li.is_pcrel) {
+            // TODO: For pcrel instructions, we need to always emit
+            // li1s instead of li1u.
             insn.ld_imm.funct = LDI0OPC;
         }
         else {
