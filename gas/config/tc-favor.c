@@ -498,6 +498,7 @@ struct li_info {
     bool is_pcrel;
     bool is_relocation;
     bool is_signed;
+    bool has_written;
     uint64_t value;
 
     struct insn *insn;
@@ -505,7 +506,83 @@ struct li_info {
     fragS *fragp;
     expressionS exp;
     char *where;
+
+    int lhs_truncation;
 };
+
+enum {
+    LI_TRUNC_NONE,
+    LI_TRUNC_ALL0,
+    LI_TRUNC_ALL1,
+};
+
+static int
+compute_li_truncation(struct li_info *li, uint64_t shift) {
+    uint64_t value = (li->value >> shift) & 0xFFFF;
+    if(value == 0) {
+        return LI_TRUNC_ALL0;
+    }
+    if(value == 0xFFFF) {
+        return LI_TRUNC_ALL1;
+    }
+    return LI_TRUNC_NONE;
+}
+
+static bool
+may_truncate_li_lhs(struct li_info *li, uint64_t shift, bool is_msh) {
+    if(li->is_relocation) return false;
+
+    int truncation = compute_li_truncation(li, shift);
+    int prev = li->lhs_truncation;
+    /* Always reset lhs_truncation to NONE unless we actually truncate. */
+    li->lhs_truncation = LI_TRUNC_NONE;
+    
+    if(truncation == LI_TRUNC_ALL0) {
+        if(shift == 0 && !li->has_written) {
+            // We can't truncate an ALL0 if we haven't generated any instructions
+            // yet.
+            return false;
+        }
+        // IMPORTANT: Only update truncation when we return true. That way,
+        // we can correctly detect strings of sign bits.
+
+        // For ALL0, we want to extend an ALL0 truncation from the LHS, but
+        // if we ended up with a 0 hole, that isn't extending the LHS truncation.
+        // in that case, don't update the truncation.
+        //
+        // So only update it 1) if we are msh, or 2) if the previous was also ALL0.
+        if(is_msh || prev == LI_TRUNC_ALL0) {
+            li->lhs_truncation = truncation;
+        }
+        return true;
+    }
+
+    if(truncation == LI_TRUNC_ALL1) {
+        // There's no way to truncate if it's in the lowest half.
+        if(shift == 0) return false;
+        // For the most significant halfword, we can always truncate.
+        // Otherwise, we have to have truncated an 0xFFFF before so that we
+        // can use the S instruction.
+        if(prev != LI_TRUNC_ALL1 && !is_msh) return false;
+
+        // Now, we can only truncate to S32 if the next bit is also a 1.
+        // 
+        // Note to self: What if we didn't have S instructions, but instead
+        // had Z instructions (or whatever) that always fill it with all 1's?
+        // Then we could avoid needing this extra redundancy.
+        //
+        // The disadvantage would be that relocation would be more complicated
+        // (for 32-bit->64 bit relocations, we would have to also update
+        // the instruction depending on the sign bit).
+        if((li->value >> (shift - 1)) & 1) {
+            li->lhs_truncation = truncation;
+            return true;
+        } 
+    }
+
+    // Otherwise, we cannot truncate.
+    return false;
+}
 
 static void
 emit_li_info(struct li_info *li, uint64_t shift) {
@@ -538,6 +615,23 @@ emit_li_info(struct li_info *li, uint64_t shift) {
     li->where += 4;
 }
 
+static uint32_t
+li_compute_funct(struct li_info *li, bool is_msh, uint32_t u, uint32_t s, uint32_t o) {
+    // Always return U for the most significant bit.
+    if(is_msh) return u;
+
+    // If we are truncating the LHS to be ALL1 or ALL0, then we need to use
+    // the appropriate sign-extending instruction.
+    if(li->lhs_truncation == LI_TRUNC_ALL1) {
+        return s;
+    }
+    if(li->lhs_truncation == LI_TRUNC_ALL0) {
+        return u;
+    }
+
+    return o;
+}
+
 void
 md_convert_frag (bfd *abfd ATTRIBUTE_UNUSED, segT asec ATTRIBUTE_UNUSED,
 		 fragS *fragp)
@@ -553,6 +647,9 @@ md_convert_frag (bfd *abfd ATTRIBUTE_UNUSED, segT asec ATTRIBUTE_UNUSED,
     li.where = fragp->fr_literal + fragp->fr_fix - 4;
 
     li.value = (uint64_t)((int64_t)fragp->fr_offset);
+
+    li.lhs_truncation = LI_TRUNC_NONE;
+    li.has_written = false;
 
     if(fragp->fr_symbol) {
         li.value += S_GET_VALUE(fragp->fr_symbol);
@@ -594,6 +691,12 @@ md_convert_frag (bfd *abfd ATTRIBUTE_UNUSED, segT asec ATTRIBUTE_UNUSED,
     }
     
     /**
+     * Carry the is_msh bool into the goto switch statement so that when we
+     * reach the relevant part of the code, we can compute it.
+     */
+    bool is_msh = true;
+
+    /**
      * It is important to be careful about signed/unsigned values.
      * - The only use of the ldi*s instructions is to sign-extend a *smaller*
      *   value into a larger one. So, for example, we can sign-extend a 32-bit
@@ -624,24 +727,42 @@ md_convert_frag (bfd *abfd ATTRIBUTE_UNUSED, segT asec ATTRIBUTE_UNUSED,
         }
     }
 
+    
+
 sz_64:
-    emit_li_info(&li, 48);
+    if(!may_truncate_li_lhs(&li, 48, is_msh)) {
+        emit_li_info(&li, 48);
+    }
+    is_msh = false;
 
-    insn.ld_imm.funct = LDI2O;
-    emit_li_info(&li, 32);
+    if(!may_truncate_li_lhs(&li, 32, is_msh)) {
+        insn.ld_imm.funct = li_compute_funct(&li, is_msh, LDI2U, LDI2S, LDI2O);
+        emit_li_info(&li, 32);
+    }
 
-    insn.ld_imm.funct = LDI1O;
 sz_32:
-    emit_li_info(&li, 16);
+    if(!may_truncate_li_lhs(&li, 16, is_msh)) {
+        insn.ld_imm.funct = li_compute_funct(&li, is_msh, LDI1U, LDI1S, LDI1O);
+        emit_li_info(&li, 16);
+    }
+    is_msh = false;
 
-    if(li.is_pcrel) {
-        insn.ld_imm.funct = LDI0OPC;
-    }
-    else {
-        insn.ld_imm.funct = LDI0O;
-    }
+    
 sz_16:
-    emit_li_info(&li, 0);
+    if(!may_truncate_li_lhs(&li, 0, is_msh)) {
+        if(li.is_pcrel) {
+            insn.ld_imm.funct = LDI0OPC;
+        }
+        else {
+            insn.ld_imm.funct = li_compute_funct(&li, is_msh, LDI0U, LDI0S, LDI0O);
+            // Special case: If we are LDIOS, but our actual size is 32 bits, then
+            // we actually want 32S.
+            if(insn.ld_imm.funct == LDI0S && size == 2) {
+                insn.ld_imm.funct = LDI0S32;
+            }
+        }
+        emit_li_info(&li, 0);
+    }
 
     valueT old = fragp->fr_fix;
     fragp->fr_fix = (uintptr_t)li.where - (uintptr_t)fragp->fr_literal;
