@@ -566,19 +566,10 @@ may_truncate_li_lhs(struct li_info *li, uint64_t shift, bool is_msh) {
         // can use the S instruction.
         if(li->lhs_trunc_prev != LI_TRUNC_ALL1 && !is_msh) return false;
 
-        // Now, we can only truncate to S32 if the next bit is also a 1.
-        // 
-        // Note to self: What if we didn't have S instructions, but instead
-        // had Z instructions (or whatever) that always fill it with all 1's?
-        // Then we could avoid needing this extra redundancy.
-        //
-        // The disadvantage would be that relocation would be more complicated
-        // (for 32-bit->64 bit relocations, we would have to also update
-        // the instruction depending on the sign bit).
-        if((li->value >> (shift - 1)) & 1) {
-            li->lhs_trunc_now = truncation;
-            return true;
-        } 
+        // We always can truncate now. Note that this is because the *s
+        // instructions are now defined to always do all 1s, not the sign bit.
+        li->lhs_trunc_now = truncation;
+        return true;
     }
 
     // Otherwise, we cannot truncate.
@@ -625,11 +616,13 @@ li_compute_funct(struct li_info *li, bool is_msh, uint32_t u, uint32_t s, uint32
 
     // If we are truncating the LHS to be ALL1 or ALL0, then we need to use
     // the appropriate sign-extending instruction.
-    if(li->lhs_trunc_prev == LI_TRUNC_ALL1) {
-        return s;
-    }
-    if(li->lhs_trunc_prev == LI_TRUNC_ALL0) {
-        return u;
+    if(!li->is_relocation) {
+        if(li->lhs_trunc_prev == LI_TRUNC_ALL1) {
+            return s;
+        }
+        if(li->lhs_trunc_prev == LI_TRUNC_ALL0) {
+            return u;
+        }
     }
 
     return o;
@@ -657,7 +650,7 @@ md_convert_frag (bfd *abfd ATTRIBUTE_UNUSED, segT asec ATTRIBUTE_UNUSED,
 
     if(fragp->fr_symbol) {
         li.value += S_GET_VALUE(fragp->fr_symbol);
-        //relocation = !S_IS_DEFINED(fragp->fr_symbol);
+        li.is_relocation = !S_IS_DEFINED(fragp->fr_symbol);
         // TODO: Kill parts of the value if we don't need the relocation.
         li.is_pcrel = S_GET_SEGMENT(fragp->fr_symbol)->output_section != bfd_abs_section_ptr;
 
@@ -747,6 +740,17 @@ sz_64:
 sz_32:
     if(!may_truncate_li_lhs(&li, 16, is_msh)) {
         insn.ld_imm.funct = li_compute_funct(&li, is_msh, LDI1U, LDI1S, LDI1O);
+
+        if(li.is_relocation && li.is_pcrel && is_msh) {
+            fix_new_exp(li.fragp,
+                (li.where - li.fragp->fr_literal),
+                4,
+                &li.exp,
+                true,
+                BFD_RELOC_FAVOR_BIT32_LI_PCREL);
+            printf("emit bit32 li pcrel\n");
+        }
+
         emit_li_info(&li, 16);
     }
     is_msh = false;
@@ -839,6 +843,19 @@ md_apply_fix(fixS *fixP ATTRIBUTE_UNUSED, valueT *valP ATTRIBUTE_UNUSED, segT se
             fixP->fx_done = 1;
         }
         //buf += 4;
+        break;
+    }
+    case BFD_RELOC_FAVOR_BIT32_LI_PCREL: {
+        uint32_t insn = get(buf);
+        // TODO: Check if fits?
+        uint32_t bit = (val >> 31) & 1;
+        insn |= bit << 28;
+        output(buf, insn);
+        if(fixP->fx_addsy == NULL) {
+            // Done with fixes that have no symbol, as they're always
+            // PC-relative..?
+            fixP->fx_done = 1;
+        }
         break;
     }
     default:

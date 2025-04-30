@@ -95,18 +95,48 @@ favor_elf_howto_table[] = {
         0x00000000,
         0x0FFFF000,
         true),
+
+    HOWTO(R_FAVOR_BIT32_LI_PCREL,
+        31, // we want the sign bit
+        4,  // 4 bytes
+        32, // 32 bit relocation
+        true,
+        28, // Place in the lsb of the funct field
+        complain_overflow_signed,
+        bfd_elf_generic_reloc,
+        "R_FAVOR_BIT32_LI_PCREL",
+        false,
+        0x00000000,
+        0x10000000,
+        true),
+
+    HOWTO(R_FAVOR_BIT64_LI_PCREL,
+        63, // we want the sign bit
+        4,  // 4 bytes
+        64, // 64 bit relocation
+        true,
+        28, // Place in the lsb of the funct field
+        complain_overflow_signed,
+        bfd_elf_generic_reloc,
+        "R_FAVOR_BIT64_LI_PCREL",
+        false,
+        0x00000000,
+        0x10000000,
+        true),
 };
 
 #define FAVOR_RELOC_TABLE_SIZE (sizeof(favor_elf_howto_table) / sizeof(*favor_elf_howto_table))
 
 static reloc_howto_type*
 favor_elf_reloc_type_lookup(bfd *abfd ATTRIBUTE_UNUSED, bfd_reloc_code_real_type code) {
-    if(code == BFD_RELOC_NONE)              return &favor_elf_howto_table[R_FAVOR_NONE];
-    if(code == BFD_RELOC_FAVOR_J22_PCREL)   return &favor_elf_howto_table[R_FAVOR_J22_PCREL];
-    if(code == BFD_RELOC_FAVOR_IMM16_PCREL) return &favor_elf_howto_table[R_FAVOR_IMM16_PCREL];
-    if(code == BFD_RELOC_FAVOR_IMM32_PCREL) return &favor_elf_howto_table[R_FAVOR_IMM32_PCREL];
-    if(code == BFD_RELOC_FAVOR_IMM48_PCREL) return &favor_elf_howto_table[R_FAVOR_IMM48_PCREL];
-    if(code == BFD_RELOC_FAVOR_IMM64_PCREL) return &favor_elf_howto_table[R_FAVOR_IMM64_PCREL];
+    if(code == BFD_RELOC_NONE)                 return &favor_elf_howto_table[R_FAVOR_NONE];
+    if(code == BFD_RELOC_FAVOR_J22_PCREL)      return &favor_elf_howto_table[R_FAVOR_J22_PCREL];
+    if(code == BFD_RELOC_FAVOR_IMM16_PCREL)    return &favor_elf_howto_table[R_FAVOR_IMM16_PCREL];
+    if(code == BFD_RELOC_FAVOR_IMM32_PCREL)    return &favor_elf_howto_table[R_FAVOR_IMM32_PCREL];
+    if(code == BFD_RELOC_FAVOR_IMM48_PCREL)    return &favor_elf_howto_table[R_FAVOR_IMM48_PCREL];
+    if(code == BFD_RELOC_FAVOR_IMM64_PCREL)    return &favor_elf_howto_table[R_FAVOR_IMM64_PCREL];
+    if(code == BFD_RELOC_FAVOR_BIT32_LI_PCREL) return &favor_elf_howto_table[R_FAVOR_BIT32_LI_PCREL];
+    if(code == BFD_RELOC_FAVOR_BIT64_LI_PCREL) return &favor_elf_howto_table[R_FAVOR_BIT64_LI_PCREL];
     return NULL;
 }
 
