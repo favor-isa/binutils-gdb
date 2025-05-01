@@ -434,7 +434,6 @@ md_assemble(char *str) {
             case PARSE_PSUEDO_LI: {
                 PARSE_TY(spec_li);
                 PARSE_CONDITIONAL();
-                //if(!ty.f && !ty.u) { as_bad("Use an unsigned load instead"); return; }
 
                 input_line_pointer = str;
                 if(!parse_reg_into(&str, &dst, false, ty.f)) {
@@ -448,43 +447,23 @@ md_assemble(char *str) {
 
                 printf("got reg: %u\n", dst);
 
-                // Now there are a few options.
-                // 1. We have a `[reg1 + reg2 + const]` expression.
-                // 2. We have a `[symbol]` expression.
-                // 3. We have a `constant number` expression.
-                // 4. We have a `symbol` expression (treated as a constant).
-                if(*str == '[') {
-                    as_bad("TODO: Loads from registers and such.");
-                    return;
-                }
+                // Now there are two options. Both are handled by expression().
+                // 1. We have a `constant number` expression.
+                // 2. We have a `symbol` expression (treated as a constant).
 
-                // Okay, we're in the 3rd/4th case. use the expression()
-                // functionality.
-                //
-                // We really want to figure out how to do this in a simpler way...
-                // but for now, just frag_more and then create a crazy fixup.
                 input_line_pointer = str;
                 expression(&exp);
-                // if(exp.X_add_symbol) {
-                //     printf("sym: %d\n", symbol_resolved_p(exp.X_add_symbol));
-                // }
-                // else {
-                //     printf("num: %ld\n", exp.X_add_number);
-                // }
 
-                // This will be replaced by md_convert_frag. We need to provide
+                // This will be replaced by md_relax_frag. We need to provide
                 // it with the correct starting info though. Ferry the size through
-                // the imm field.
+                // the imm field, and the type through the funct field.
                 insn = mk_ld_imm(conditional, dst, ty.sz, ty.f, ty.type);
                 output(where, favor_encode(insn));
-                //s
-                //insn = mk_ld_imm(conditional, dst, 0, ty.f, ty.vec, LS_IMM_LD64);
+
                 end_frag_with_exp(&exp,
                     12,
                     0,
                     RELAX_LD);
-
-               
 
                 return;
             }
@@ -832,10 +811,12 @@ sz_16:
     return li.bytes_written - 4;
 }
 
-// TODO:
-// Maybe instead of the estimate_size_before_relax hack, we should just implement
-// md_relax_frag?
-
+/**
+ * This method appears to be called in a loop to relax every frag and move things
+ * around as appropriate.
+ * 
+ * As such, it is where we want to figure out the length for our li sequences.
+ */
 int
 favor_relax_frag(segT asec ATTRIBUTE_UNUSED, fragS *fragp, int stretch ATTRIBUTE_UNUSED) {
     if(fragp->fr_subtype == RELAX_LD) {
@@ -851,42 +832,18 @@ void
 md_convert_frag (bfd *abfd ATTRIBUTE_UNUSED, segT asec ATTRIBUTE_UNUSED,
 		 fragS *fragp ATTRIBUTE_UNUSED)
 {
-    /*if(fragp->fr_subtype != RELAX_LD) {
-        as_bad_where(fragp->fr_file, fragp->fr_line, "Unknown machine-dependent relaxation.");
-    }
-    do_convert_frag(fragp, true);
-
-    if(fragp->fr_next) {
-        printf("address of next: %lx -> %lx (%lu)\n",
-            fragp->fr_address,
-            fragp->fr_next->fr_address,
-            (uintptr_t)fragp->fr_next->fr_address - (uintptr_t)fragp->fr_address);
-        //fragp->fr_next->fr_address = fragp->fr_address + fragp->fr_fix;
-    }*/
+    /* This doesn't do anything anymore. Everything has been moved to relax. */
 }
 
-/**
- * So.
- * 
- * Apparently.
- * 
- * By "estimite size" they really mean "give us the exact size."
- * 
- * The easiest way to do this for our li logic is to just run the whole logic
- * again. I think this shouldn't actually be too bad in practice, as it's overall
- * pretty straightforward. But man does that seem kind of rude though.
- * 
- * It also might mean that we can't optimize certain kinds of labels to be
- * small? In particular, anything that would move if we were to shrink is
- * a no-no apparently. So probably if the label is still unresolved now
- * determines whether we can resolve it absolutely...?
+/*
+ * My latest understanding of this is that it does not need to return an exact size.
+ * The way that do_convert_frag is written, we can return an exact size if needed.
  */
 int
 md_estimate_size_before_relax (fragS* fragp, segT) {
     if(fragp->fr_subtype != RELAX_LD) return 0;
 
-    //printf("size estimation: %lu\n", fragp->fr_fix + do_convert_frag(fragp, false) - 4);
-    //return do_convert_frag(fragp, false) - 4;
+    /* RELAX_LD can at most be 12 more bytes. */
     return 12;
 }
 
