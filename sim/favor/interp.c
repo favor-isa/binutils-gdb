@@ -176,16 +176,16 @@ status_right_shift(struct favor_sim_status *status, uint64_t src1, uint64_t src2
   APPLY_SINGLE_VEC3_X1(opcode, fn, statusfn, 3, __VA_ARGS__) \
 } while(0)
 
-#define APPLY_SINGLE_VEC_GENERIC(opcode, fn, idx) \
+#define APPLY_SINGLE_VEC_GENERIC(opcode, fn, idx, ...) \
   if(opcode_mask(cpu, opcode.conditional, idx, opcode.vec)) { \
-    fn(idx) ; \
+    fn(idx ,##__VA_ARGS__) ; \
   }
 
-#define APPLY_VEC_GENERIC(opcode, fn) do { \
-  APPLY_SINGLE_VEC_GENERIC(opcode, fn, 0) \
-  APPLY_SINGLE_VEC_GENERIC(opcode, fn, 1) \
-  APPLY_SINGLE_VEC_GENERIC(opcode, fn, 2) \
-  APPLY_SINGLE_VEC_GENERIC(opcode, fn, 3) \
+#define APPLY_VEC_GENERIC(opcode, fn, ...) do { \
+  APPLY_SINGLE_VEC_GENERIC(opcode, fn, 0, __VA_ARGS__) \
+  APPLY_SINGLE_VEC_GENERIC(opcode, fn, 1, __VA_ARGS__) \
+  APPLY_SINGLE_VEC_GENERIC(opcode, fn, 2, __VA_ARGS__) \
+  APPLY_SINGLE_VEC_GENERIC(opcode, fn, 3, __VA_ARGS__) \
 } while(0)
 
 #define MASKED_ARITH(src1, src2, sz, op) mask_sz(src1 op src2, sz)
@@ -309,6 +309,15 @@ sign_extend_32(uint32_t input, uint32_t bit) {
     return (int32_t)input;
 }
 
+static void
+do_cmp(uint32_t idx, struct favor_sim_cpu *cpu, uint32_t src2, uint32_t dest, int funct, uint32_t sz) {
+  uint64_t computed = cpu->gpr[src2 | idx] - cpu->gpr[dest | idx];
+  status_add(&cpu->status[idx], cpu->gpr[dest | idx], cpu->gpr[src2 | idx], computed, sz);
+  if(funct > 0) {
+    cpu->c_codes[idx] = compute_condition(&cpu->status[idx], funct);
+  }
+}
+
 void
 sim_engine_run (SIM_DESC sd,
 		int next_cpu_nr, /* ignore  */
@@ -331,7 +340,7 @@ sim_engine_run (SIM_DESC sd,
             case POP_SINGLETON:
                 if(insn.singleton.funct >= SNG_SETEQ && insn.singleton.funct <= SNG_SETNEG) {
                   int condition = insn.singleton.funct - SNG_SETEQ;
-                  #define FN(idx) cpu->c_codes[idx] = compute_condition(&cpu->status[idx], condition);
+                  #define FN(idx, ...) cpu->c_codes[idx] = compute_condition(&cpu->status[idx], condition);
                   APPLY_VEC_GENERIC(insn.singleton, FN);
                   #undef FN
 
@@ -384,18 +393,55 @@ sim_engine_run (SIM_DESC sd,
                 }
                 break;
             case POP_I2: {
-              switch(insn.int3.funct) {
+              if(insn.int2.funct >= I2_CMP_EQ && insn.int2.funct < I2_CMP_RES0) {
+                APPLY_VEC_GENERIC(insn.int2, do_cmp, cpu, insn.int2.src2, insn.int2.dest, insn.int2.funct - I2_CMP_EQ, insn.int2.sz);
+              }
+              else switch(insn.int2.funct) {
 
               }
               break;
             }
             case OP_JUMP: {
               int32_t offset = sign_extend_32(insn.jump.immediate, 21) * 4;
-              TRACE_DECODE(scpu, "%p: OP_JUMP %d", pc_addr, offset);
-              if(insn.jump.funct == J_JUMP) {
-                CPU_PC_SET(scpu, cpu->pc + offset);
-                do_increment_pc = false;
+              uint32_t funct = insn.jump.funct;
+              uint32_t conditional = 0;
+              if(funct > 9) {
+                  funct -= 10;
+                  if(funct > 9) {
+                      funct -= 10;
+                      // Not conditional at all
+                      conditional = 0;
+                  } 
+                  else {
+                      // Inverted conditional
+                      conditional = 2;
+                  }
               }
+              else {
+                  // Regular conditional
+                  conditional = 1;
+              }
+              TRACE_DECODE(scpu, "%p: OP_JUMP %d", pc_addr, offset);
+
+              // Skip conditional jump instructions if the condition is met
+              if(conditional == 1 && !cpu->c_codes[0]) break;
+              if(conditional == 2 &&  cpu->c_codes[0]) break;
+
+              if(funct != 0) {
+                // If the condition for the jump isn't true, don't execute it.
+                if(!compute_condition(&cpu->status[0], funct - 1)) {
+                  break;
+                }
+              }
+
+              // For and-link instructions, also save the pc.
+              if(insn.jump.and_link) {
+                cpu->gpr[REG_LA] = cpu->pc;
+              }
+
+              // Perform the jump.
+              CPU_PC_SET(scpu, cpu->pc + offset);
+              do_increment_pc = false;
               break;
             }
             // TODO: Switch to psuedo-ops?
