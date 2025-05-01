@@ -25,14 +25,14 @@ FAVOR_OP_TABLE_DEFINE(singleton,
     { .parser = PARSE_SINGLETON, .name = "seteq", .funct = SNG_SETEQ },
     { .parser = PARSE_SINGLETON, .name = "setne", .funct = SNG_SETNE },
     
-    { .parser = PARSE_SINGLETON_TYPED, .name = "setl",  .funct = SNG_SETLU,  .type = TYPE_U },
-    { .parser = PARSE_SINGLETON_TYPED, .name = "setg",  .funct = SNG_SETGU,  .type = TYPE_U },
     { .parser = PARSE_SINGLETON_TYPED, .name = "setle", .funct = SNG_SETLEU, .type = TYPE_U },
+    { .parser = PARSE_SINGLETON_TYPED, .name = "setg",  .funct = SNG_SETGU,  .type = TYPE_U },
+    { .parser = PARSE_SINGLETON_TYPED, .name = "setl",  .funct = SNG_SETLU,  .type = TYPE_U },
     { .parser = PARSE_SINGLETON_TYPED, .name = "setge", .funct = SNG_SETGEU, .type = TYPE_U },
 
-    { .parser = PARSE_SINGLETON_TYPED, .name = "setl",  .funct = SNG_SETL,   .type = TYPE_S },
-    { .parser = PARSE_SINGLETON_TYPED, .name = "setg" , .funct = SNG_SETG,   .type = TYPE_S },
     { .parser = PARSE_SINGLETON_TYPED, .name = "setle", .funct = SNG_SETLE,  .type = TYPE_S },
+    { .parser = PARSE_SINGLETON_TYPED, .name = "setg" , .funct = SNG_SETG,   .type = TYPE_S },
+    { .parser = PARSE_SINGLETON_TYPED, .name = "setl",  .funct = SNG_SETL,   .type = TYPE_S },
     { .parser = PARSE_SINGLETON_TYPED, .name = "setge", .funct = SNG_SETGE,  .type = TYPE_S },
     
     { .parser = PARSE_SINGLETON, .name = "setneg", .funct = SNG_SETNEG },
@@ -53,14 +53,14 @@ FAVOR_OP_TABLE_DEFINE(jump,
     { .parser = PARSE_JUMP, .name = "beq",  .funct = J_BEQ  },
     { .parser = PARSE_JUMP, .name = "bne",  .funct = J_BNE  },
     
-    { .parser = PARSE_JUMP, .name = "blu",  .funct = J_BLU  },
-    { .parser = PARSE_JUMP, .name = "bgu",  .funct = J_BGU  },
     { .parser = PARSE_JUMP, .name = "bleu", .funct = J_BLEU },
+    { .parser = PARSE_JUMP, .name = "bgu",  .funct = J_BGU  },
+    { .parser = PARSE_JUMP, .name = "blu",  .funct = J_BLU  },
     { .parser = PARSE_JUMP, .name = "bgeu", .funct = J_BGEU },
 
-    { .parser = PARSE_JUMP, .name = "bls",  .funct = J_BL   },
-    { .parser = PARSE_JUMP, .name = "bgs",  .funct = J_BG   },
     { .parser = PARSE_JUMP, .name = "bles", .funct = J_BLE  },
+    { .parser = PARSE_JUMP, .name = "bgs",  .funct = J_BG   },
+    { .parser = PARSE_JUMP, .name = "bls",  .funct = J_BL   },
     { .parser = PARSE_JUMP, .name = "bges", .funct = J_BGE  },
 )
 
@@ -88,14 +88,14 @@ FAVOR_OP_TABLE_DEFINE(int2,
     { .parser = PARSE_2ARG, .name = "cmpeq",  .funct = I2_CMP_EQ,  .type = TYPE_U },
     { .parser = PARSE_2ARG, .name = "cmpne",  .funct = I2_CMP_NE,  .type = TYPE_U },
     
-    { .parser = PARSE_2ARG, .name = "cmpl",   .funct = I2_CMP_LU,  .type = TYPE_U },
-    { .parser = PARSE_2ARG, .name = "cmpg",   .funct = I2_CMP_GU,  .type = TYPE_U },
     { .parser = PARSE_2ARG, .name = "cmple",  .funct = I2_CMP_LEU, .type = TYPE_U },
+    { .parser = PARSE_2ARG, .name = "cmpg",   .funct = I2_CMP_GU,  .type = TYPE_U },
+    { .parser = PARSE_2ARG, .name = "cmpl",   .funct = I2_CMP_LU,  .type = TYPE_U },
     { .parser = PARSE_2ARG, .name = "cmpge",  .funct = I2_CMP_GEU, .type = TYPE_U },
-
-    { .parser = PARSE_2ARG, .name = "cmpl",   .funct = I2_CMP_L,   .type = TYPE_S },
-    { .parser = PARSE_2ARG, .name = "cmpg",   .funct = I2_CMP_G,   .type = TYPE_S },
+    
     { .parser = PARSE_2ARG, .name = "cmple",  .funct = I2_CMP_LE,  .type = TYPE_S },
+    { .parser = PARSE_2ARG, .name = "cmpg",   .funct = I2_CMP_G,   .type = TYPE_S },
+    { .parser = PARSE_2ARG, .name = "cmpl",   .funct = I2_CMP_L,   .type = TYPE_S },
     { .parser = PARSE_2ARG, .name = "cmpge",  .funct = I2_CMP_GE,  .type = TYPE_S },
     
     { .parser = PARSE_2ARG, .name = "cmpneg", .funct = I2_CMP_NEG, .type = TYPE_U },

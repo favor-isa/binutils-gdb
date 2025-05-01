@@ -143,14 +143,16 @@ enum condition {
     COND_EQ,
     COND_NE,
     
-    COND_LU,
-    COND_GU,
+    // For le/g and l/ge, note that each one is the opposite of the other
+    // with respect to the least-significant bit.
     COND_LEU,
+    COND_GU,
+    COND_LU,
     COND_GEU,
     
-    COND_L,
-    COND_G,
     COND_LE,
+    COND_G,
+    COND_L,
     COND_GE,
 
     COND_NEG,
@@ -175,14 +177,14 @@ enum singleton {
     SNG_SETEQ = 16,
     SNG_SETNE,
 
-    SNG_SETLU,
-    SNG_SETGU,
     SNG_SETLEU,
+    SNG_SETGU,
+    SNG_SETLU,
     SNG_SETGEU,
 
-    SNG_SETL,
-    SNG_SETG,
     SNG_SETLE,
+    SNG_SETG,
+    SNG_SETL,
     SNG_SETGE,
     
     SNG_SETNEG,
@@ -198,37 +200,37 @@ enum jump {
     JC_BEQ,
     JC_BNE,
     
-    JC_BLU,
-    JC_BGU,
     JC_BLEU,
+    JC_BGU,
+    JC_BLU,
     JC_BGEU,
-    JC_BL,
-    JC_BG,
     JC_BLE,
+    JC_BG,
+    JC_BL,
 
     JIC_JUMP,
     JIC_BEQ,
     JIC_BNE,
     
-    JIC_BLU,
+    JIC_BLUE,
     JIC_BGU,
-    JIC_BLEU,
+    JIC_BLU,
     JIC_BGEU,
-    JIC_BL,
-    JIC_BG,
     JIC_BLE,
+    JIC_BG,
+    JIC_BL,
 
     J_JUMP,
     J_BEQ,
     J_BNE,
     
-    J_BLU,
-    J_BGU,
     J_BLEU,
+    J_BGU,
+    J_BLU,
     J_BGEU,
-    J_BL,
-    J_BG,
     J_BLE,
+    J_BG,
+    J_BL,
 
     // Unconditional-only.
     J_BGE,
@@ -263,14 +265,14 @@ enum int2 {
     I2_CMP_EQ,
     I2_CMP_NE,
     
-    I2_CMP_LU,
-    I2_CMP_GU,
     I2_CMP_LEU,
+    I2_CMP_GU,
+    I2_CMP_LU,
     I2_CMP_GEU,
     
-    I2_CMP_L,
-    I2_CMP_G,
     I2_CMP_LE,
+    I2_CMP_G,
+    I2_CMP_L,
     I2_CMP_GE,
     
 
