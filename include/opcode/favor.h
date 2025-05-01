@@ -17,6 +17,7 @@ struct favor_op_info {
 
 enum favor_op_parse {
     PARSE_3ARG,
+    PARSE_2ARG,
     PARSE_PSUEDO_LI,
     PARSE_REAL_LI,
     PARSE_SINGLETON,
@@ -52,6 +53,7 @@ size_t favor_op_ ## name ## _count = sizeof(favor_op_ ## name) / sizeof(*favor_o
 FAVOR_OP_TABLE_DECLARE(singleton)
 FAVOR_OP_TABLE_DECLARE(jump)
 FAVOR_OP_TABLE_DECLARE(int3)
+FAVOR_OP_TABLE_DECLARE(int2)
 FAVOR_OP_TABLE_DECLARE(ld_imm)
 
 FAVOR_OP_TABLE_DECLARE(psuedo)
@@ -264,10 +266,12 @@ enum int2 {
     I2_CMP_NEG,
     // really non-negative: todo better name?
     I2_CMP_NNE,
+
     I2_CMP_RES0,
     I2_CMP_RES1,
     I2_CMP_RES2,
     I2_CMP_RES3,
+
     I2_CMP,
     I2_NEGATE,
     I2_NOT,
@@ -571,6 +575,21 @@ mk_int3(uint32_t replication, uint32_t conditional, uint32_t dest, uint32_t src1
 
 static inline
 struct insn
+mk_int2(uint32_t replication, uint32_t conditional, uint32_t dest, uint32_t src2, uint32_t sz, uint32_t vec, uint32_t funct) {
+    struct insn result = {0};
+    result.p_opcode = POP_I2;
+    result.int2.replication = replication;
+    result.int2.conditional = conditional;
+    result.int2.dest = dest;
+    result.int2.src2 = src2;
+    result.int2.sz = sz;
+    result.int2.vec = vec;
+    result.int2.funct = funct;
+    return result;
+}
+
+static inline
+struct insn
 mk_float3(uint32_t replication, uint32_t conditional, uint32_t dest, uint32_t src1, uint32_t src2, uint32_t sz, uint32_t vec, uint32_t funct) {
     struct insn result = {0};
     result.p_opcode = POP_F3;
@@ -582,6 +601,21 @@ mk_float3(uint32_t replication, uint32_t conditional, uint32_t dest, uint32_t sr
     result.float3.sz = sz;
     result.float3.vec = vec;
     result.float3.funct = funct;
+    return result;
+}
+
+static inline
+struct insn
+mk_float2(uint32_t replication, uint32_t conditional, uint32_t dest, uint32_t src2, uint32_t sz, uint32_t vec, uint32_t funct) {
+    struct insn result = {0};
+    result.p_opcode = POP_F2;
+    result.float2.replication = replication;
+    result.float2.conditional = conditional;
+    result.float2.dest = dest;
+    result.float2.src2 = src2;
+    result.float2.sz = sz;
+    result.float2.vec = vec;
+    result.float2.funct = funct;
     return result;
 }
 

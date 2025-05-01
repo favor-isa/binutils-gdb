@@ -57,6 +57,7 @@ for(i = 0; i < favor_op_ ## table ## _count; ++i) { \
     FAVOR_OP_TABLE_INSTALL(singleton)
     FAVOR_OP_TABLE_INSTALL(jump)
     FAVOR_OP_TABLE_INSTALL(int3)
+    FAVOR_OP_TABLE_INSTALL(int2)
     FAVOR_OP_TABLE_INSTALL(ld_imm)
 
     FAVOR_OP_TABLE_INSTALL(psuedo)
@@ -412,6 +413,22 @@ md_assemble(char *str) {
 
                 insn = (ty.f ? mk_float3 : mk_int3)(replication, conditional,
                     dst, src1, src2, ty.sz, ty.vec, op_info->funct);
+                break;
+            }
+            case PARSE_2ARG: {
+                PARSE_TY(spec_num);
+                PARSE_CONDITIONAL(false);
+
+                op_info = lookup_type(op_info, ty.type);
+                if(!op_info) break;
+
+                if(!parse_reg_into(&str, &dst, false, ty.f)) return;
+                if(!parse_reg_into(&str, &src2, true, ty.f)) return;
+                parse_replication(&str, &replication);
+
+                insn = (ty.f ? mk_float2 : mk_int2)(replication, conditional,
+                    dst, src2, ty.sz, ty.vec, op_info->funct);
+
                 break;
             }
             case PARSE_JUMP: {

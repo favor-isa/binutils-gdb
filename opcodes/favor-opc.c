@@ -79,6 +79,29 @@ FAVOR_OP_TABLE_DEFINE(int3,
     { .parser = PARSE_3ARG, .name = "max",  .funct = I3_MAXS, .type = TYPE_S },
 )
 
+// TODO: Rearrange all this to match jumps
+FAVOR_OP_TABLE_DEFINE(int2,
+    { .parser = PARSE_2ARG, .name = "cmpeq",  .funct = I2_CMP_EQ,  .type = TYPE_U },
+    { .parser = PARSE_2ARG, .name = "cmpne",  .funct = I2_CMP_NE,  .type = TYPE_U },
+    { .parser = PARSE_2ARG, .name = "cmpg",   .funct = I2_CMP_G,   .type = TYPE_S },
+    { .parser = PARSE_2ARG, .name = "cmpl",   .funct = I2_CMP_L,   .type = TYPE_S },
+    { .parser = PARSE_2ARG, .name = "cmpge",  .funct = I2_CMP_GE,  .type = TYPE_S },
+    { .parser = PARSE_2ARG, .name = "cmple",  .funct = I2_CMP_LE,  .type = TYPE_S },
+    { .parser = PARSE_2ARG, .name = "cmpg",   .funct = I2_CMP_GU,  .type = TYPE_U },
+    { .parser = PARSE_2ARG, .name = "cmpl",   .funct = I2_CMP_LU,  .type = TYPE_U },
+    { .parser = PARSE_2ARG, .name = "cmpge",  .funct = I2_CMP_GEU, .type = TYPE_U },
+    { .parser = PARSE_2ARG, .name = "cmple",  .funct = I2_CMP_LEU, .type = TYPE_U },
+    { .parser = PARSE_2ARG, .name = "cmpneg", .funct = I2_CMP_NEG, .type = TYPE_U },
+    { .parser = PARSE_2ARG, .name = "cmpnne", .funct = I2_CMP_NNE, .type = TYPE_U },
+    RESERVED,
+    RESERVED,
+    RESERVED,
+    RESERVED,
+    { .parser = PARSE_2ARG, .name = "cmp", .funct = I2_CMP,    .type = TYPE_U },
+    { .parser = PARSE_2ARG, .name = "neg", .funct = I2_NEGATE, .type = TYPE_U },
+    { .parser = PARSE_2ARG, .name = "not", .funct = I2_NOT,    .type = TYPE_U },
+)
+
 FAVOR_OP_TABLE_DEFINE(ld_imm, 
     { .parser = PARSE_REAL_LI, .name = "li0u",   .funct = LDI0U, .type = TYPE_U },
     { .parser = PARSE_REAL_LI, .name = "li0s",   .funct = LDI0S, .type = TYPE_S },
@@ -380,7 +403,7 @@ favor_decode(uint32_t code) {
         case OP_INT: {
             // Variant instructions are either swizzle, 2-arg int, or 2-arg fix.
             if(variant) {
-                uint32_t bigfunct = (code >> 17) & 0x5FF;
+                uint32_t bigfunct = (code >> 17) & 0x7FF;
                 if((bigfunct >> 7) == 0xF) {
                     // Swizzle instruction.
                     insn.p_opcode = POP_INT_SWIZZLE;

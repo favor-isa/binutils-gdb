@@ -53,7 +53,7 @@ pr_cond(struct favor_dis_info *info, uint32_t conditional) {
     else {
         FPRINTF(" ");
     }
-    for(size_t i = info->oplen; i < 10; ++i) {
+    for(size_t i = info->oplen; i < 11; ++i) {
         /* Pad each string so that all the arguments will somewhat line up. */
         FPRINTF(" ");
     }
@@ -135,7 +135,7 @@ print_insn_favor(bfd_vma addr, struct disassemble_info *dis_info) {
 
     // We read the opcode, disassemble it.
     struct insn insn = favor_decode(opcode);
-    
+
     switch(insn.p_opcode) {
         case POP_SINGLETON: {
             struct favor_op_info *op = LOOKUP_OPCODE(singleton, insn.singleton.funct);
@@ -161,6 +161,21 @@ print_insn_favor(bfd_vma addr, struct disassemble_info *dis_info) {
             pr_gpr(info, insn.int3.src1, ", ");
             pr_gpr(info, insn.int3.src2, "");
             pr_replication(info, insn.int3.replication);
+
+            break;
+        }
+        case POP_I2: {
+            struct favor_op_info *op = LOOKUP_OPCODE(int2, insn.int2.funct);
+            if(!info) goto bad_op;
+
+            uint32_t is_signed = op->type == TYPE_S;
+            
+            pr_opname(info, op->name);
+            pr_type(info, 0, is_signed, insn.int2.sz, insn.int2.vec);
+            pr_cond(info, insn.int2.conditional);
+            pr_gpr(info, insn.int2.dest, ", ");
+            pr_gpr(info, insn.int2.src2, "");
+            pr_replication(info, insn.int2.replication);
 
             break;
         }
