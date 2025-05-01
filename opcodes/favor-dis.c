@@ -162,15 +162,37 @@ print_insn_favor(bfd_vma addr, struct disassemble_info *dis_info) {
             break;
         }
         case OP_JUMP: {
+            // All of the funct codes come in groups of 10. Subtract by 10 twice
+            // to get an index into the operator table.
+            uint32_t funct = insn.jump.funct;
+            uint32_t conditional = 0;
+            if(funct > 9) {
+                funct -= 10;
+                if(funct > 9) {
+                    funct -= 10;
+                    // Not conditional at all
+                    conditional = 0;
+                } 
+                else {
+                    // Inverted conditional
+                    conditional = 2;
+                }
+            }
+            else {
+                // Regular conditional
+                conditional = 1;
+            }
+
+            struct favor_op_info *op = LOOKUP_OPCODE(jump, funct);
+            if(!op) goto bad_op;
+
             int32_t jump_off = (sign_extend_32(insn.jump.immediate, 21) * 4);
             // We'll never hit the maximum negative value because the immediate
             // value isn't large enough.
             uint32_t jump_off_abs = (uint32_t)((jump_off < 0) ? -jump_off : jump_off);
 
-            switch(insn.jump.funct) {
-                case J_JUMP: pr_opname(info, "j"); break;
-            }
-            pr_cond(info, 0); // TODO conditional
+            pr_opname(info, op->name);
+            pr_cond(info, conditional); // TODO conditional
             // TODO: Figure out sign extension? Also...
 
             FPRINTF("%c%#x ", " -"[jump_off < 0], jump_off_abs);

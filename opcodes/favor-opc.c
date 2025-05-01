@@ -41,8 +41,23 @@ FAVOR_OP_TABLE_DEFINE(singleton,
 )
 
 FAVOR_OP_TABLE_DEFINE(psuedo,
-    { .parser = PARSE_JUMP, .name = "j" },
     { .parser = PARSE_PSUEDO_LI, .name = "li" }
+)
+
+// For jump opcodes, the and-link is represent by ., e.g. j.l
+FAVOR_OP_TABLE_DEFINE(jump,
+    { .parser = PARSE_JUMP, .name = "j",    .funct = J_JUMP },
+    { .parser = PARSE_JUMP, .name = "beq",  .funct = J_BEQ  },
+    { .parser = PARSE_JUMP, .name = "bne",  .funct = J_BNE  },
+    { .parser = PARSE_JUMP, .name = "bls",  .funct = J_BL   },
+    { .parser = PARSE_JUMP, .name = "bgs",  .funct = J_BG   },
+    { .parser = PARSE_JUMP, .name = "bles", .funct = J_BLE  },
+    { .parser = PARSE_JUMP, .name = "blu",  .funct = J_BLU  },
+    { .parser = PARSE_JUMP, .name = "bgu",  .funct = J_BGU  },
+    { .parser = PARSE_JUMP, .name = "bleu", .funct = J_BLEU },
+    { .parser = PARSE_JUMP, .name = "bgeu", .funct = J_BGEU },
+
+    { .parser = PARSE_JUMP, .name = "bges", .funct = J_BGE  },
 )
 
 FAVOR_OP_TABLE_DEFINE(int3,

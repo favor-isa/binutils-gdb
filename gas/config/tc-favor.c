@@ -55,6 +55,7 @@ for(i = 0; i < favor_op_ ## table ## _count; ++i) { \
 }
 
     FAVOR_OP_TABLE_INSTALL(singleton)
+    FAVOR_OP_TABLE_INSTALL(jump)
     FAVOR_OP_TABLE_INSTALL(int3)
     FAVOR_OP_TABLE_INSTALL(ld_imm)
 
@@ -871,7 +872,7 @@ md_apply_fix(fixS *fixP ATTRIBUTE_UNUSED, valueT *valP ATTRIBUTE_UNUSED, segT se
     case BFD_RELOC_FAVOR_J22_PCREL: {
         // TODO: CUstom relocation
         uint32_t insn = get(buf);
-        insn |= ((uint32_t)val >> 2) << 6;
+        insn |= (((uint32_t)val >> 2) & 0x3FFFFF) << 6;
         output(buf, insn);
         if(fixP->fx_addsy == NULL) {
             // Done with fixes that have no symbol, as they're always

@@ -50,6 +50,7 @@ struct favor_op_info favor_op_ ## name[] = { \
 size_t favor_op_ ## name ## _count = sizeof(favor_op_ ## name) / sizeof(*favor_op_ ## name);
 
 FAVOR_OP_TABLE_DECLARE(singleton)
+FAVOR_OP_TABLE_DECLARE(jump)
 FAVOR_OP_TABLE_DECLARE(int3)
 FAVOR_OP_TABLE_DECLARE(ld_imm)
 
@@ -187,25 +188,12 @@ enum singleton {
 };
 
 enum jump {
-    J_JUMP,
-    J_BEQ,
-    J_BNE,
-    J_BL,
-    J_BG,
-    J_BLE,
-    J_BGE,
-    J_BLU,
-    J_BGU,
-    J_BLEU,
-    J_BGEU,
-
     JC_JUMP,
     JC_BEQ,
     JC_BNE,
     JC_BL,
     JC_BG,
     JC_BLE,
-    JC_BGE,
     JC_BLU,
     JC_BGU,
     JC_BLEU,
@@ -217,11 +205,24 @@ enum jump {
     JIC_BL,
     JIC_BG,
     JIC_BLE,
-    JIC_BGE,
     JIC_BLU,
     JIC_BGU,
     JIC_BLEU,
     JIC_BGEU,
+
+    J_JUMP,
+    J_BEQ,
+    J_BNE,
+    J_BL,
+    J_BG,
+    J_BLE,
+    J_BLU,
+    J_BGU,
+    J_BLEU,
+    J_BGEU,
+
+    // Unconditional-only.
+    J_BGE,
 };
 
 enum int3 {
