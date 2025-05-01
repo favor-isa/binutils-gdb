@@ -142,17 +142,20 @@ enum opcode_flag {
 enum condition {
     COND_EQ,
     COND_NE,
-    COND_G,
-    COND_L,
-    COND_GE,
-    COND_LE,
-    COND_GU,
+    
     COND_LU,
-    COND_GEU,
+    COND_GU,
     COND_LEU,
+    COND_GEU,
+    
+    COND_L,
+    COND_G,
+    COND_LE,
+    COND_GE,
+
     COND_NEG,
     // really non-negative: todo better name?
-    COND_NNE
+    COND_NNE,
 };
 
 enum cc_misc {
@@ -169,18 +172,19 @@ enum singleton {
     SNG_HALT,
     SNG_SYSCALL,
 
-
-
     SNG_SETEQ = 16,
     SNG_SETNE,
-    SNG_SETG,
-    SNG_SETL,
-    SNG_SETGE,
-    SNG_SETLE,
-    SNG_SETGU,
+
     SNG_SETLU,
-    SNG_SETGEU,
+    SNG_SETGU,
     SNG_SETLEU,
+    SNG_SETGEU,
+
+    SNG_SETL,
+    SNG_SETG,
+    SNG_SETLE,
+    SNG_SETGE,
+    
     SNG_SETNEG,
     SNG_SETNNE,
     SNG_SETRES0,
@@ -193,35 +197,38 @@ enum jump {
     JC_JUMP,
     JC_BEQ,
     JC_BNE,
-    JC_BL,
-    JC_BG,
-    JC_BLE,
+    
     JC_BLU,
     JC_BGU,
     JC_BLEU,
     JC_BGEU,
+    JC_BL,
+    JC_BG,
+    JC_BLE,
 
     JIC_JUMP,
     JIC_BEQ,
     JIC_BNE,
-    JIC_BL,
-    JIC_BG,
-    JIC_BLE,
+    
     JIC_BLU,
     JIC_BGU,
     JIC_BLEU,
     JIC_BGEU,
+    JIC_BL,
+    JIC_BG,
+    JIC_BLE,
 
     J_JUMP,
     J_BEQ,
     J_BNE,
-    J_BL,
-    J_BG,
-    J_BLE,
+    
     J_BLU,
     J_BGU,
     J_BLEU,
     J_BGEU,
+    J_BL,
+    J_BG,
+    J_BLE,
 
     // Unconditional-only.
     J_BGE,
@@ -255,14 +262,18 @@ enum int3 {
 enum int2 {
     I2_CMP_EQ,
     I2_CMP_NE,
-    I2_CMP_G,
-    I2_CMP_L,
-    I2_CMP_GE,
-    I2_CMP_LE,
-    I2_CMP_GU,
+    
     I2_CMP_LU,
-    I2_CMP_GEU,
+    I2_CMP_GU,
     I2_CMP_LEU,
+    I2_CMP_GEU,
+    
+    I2_CMP_L,
+    I2_CMP_G,
+    I2_CMP_LE,
+    I2_CMP_GE,
+    
+
     I2_CMP_NEG,
     // really non-negative: todo better name?
     I2_CMP_NNE,

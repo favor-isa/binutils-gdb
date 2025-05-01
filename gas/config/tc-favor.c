@@ -450,7 +450,7 @@ md_assemble(char *str) {
 
                 PARSE_CONDITIONAL(true);
 
-                if(conditional && op_info->funct > J_BGEU) {
+                if(conditional && op_info->funct > J_BLE) {
                     as_bad("Jump type an only be represented as unconditional.");
                 }
                 if(conditional == 1) {

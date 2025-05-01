@@ -383,6 +383,12 @@ sim_engine_run (SIM_DESC sd,
                   case I3_MAXS: APPLY_VEC3(insn.int3, maxs, status_int, insn.int3.sz); break;
                 }
                 break;
+            case POP_I2: {
+              switch(insn.int3.funct) {
+
+              }
+              break;
+            }
             case OP_JUMP: {
               int32_t offset = sign_extend_32(insn.jump.immediate, 21) * 4;
               TRACE_DECODE(scpu, "%p: OP_JUMP %d", pc_addr, offset);
