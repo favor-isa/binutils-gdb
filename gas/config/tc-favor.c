@@ -326,6 +326,24 @@ end_frag_with_exp(expressionS *exp, size_t max_chars, size_t var, relax_substate
         sym = NULL;
         offset = exp->X_add_number;
     break;
+    case O_big: {
+        sym = NULL;
+        uint64_t value = 0;
+        // TODO: Specify the size of this, and convert to either 32-bit or
+        // 64-bit float depending.
+        LITTLENUM_TYPE words[4];
+        gen_to_words(words, 4, 11);
+        value |= (uint64_t)(words[3] & 0xFF) << 0ULL;
+        value |= (uint64_t)(words[3] >> 8)   << 8ULL;
+        value |= (uint64_t)(words[2] & 0xFF) << 16ULL;
+        value |= (uint64_t)(words[2] >> 8)   << 24ULL;
+        value |= (uint64_t)(words[1] & 0xFF) << 32ULL;
+        value |= (uint64_t)(words[1] >> 8)   << 40ULL;
+        value |= (uint64_t)(words[0] & 0xFF) << 48ULL;
+        value |= (uint64_t)(words[0] >> 8)   << 56ULL;
+        offset = value;
+        break;
+    }
     default:
         sym = make_expr_symbol (exp);
         offset = 0;
