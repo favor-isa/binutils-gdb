@@ -192,6 +192,7 @@ print_insn_favor(bfd_vma addr, struct disassemble_info *dis_info) {
             uint32_t jump_off_abs = (uint32_t)((jump_off < 0) ? -jump_off : jump_off);
 
             pr_opname(info, op->name);
+            if(insn.jump.and_link) pr_opname(info, ".l");
             pr_cond(info, conditional); // TODO conditional
             // TODO: Figure out sign extension? Also...
 

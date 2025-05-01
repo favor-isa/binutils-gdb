@@ -420,6 +420,17 @@ md_assemble(char *str) {
                 insn.jump.funct = op_info->funct;
                 insn.jump.immediate = 0; // fixup
 
+                if(*str == '.') {
+                    str++;
+                    if(*str == 'l') {
+                        str++;
+                        insn.jump.and_link = 1;
+                    }
+                    else {
+                        as_bad("Unexpected postfix after jump instruction.");
+                    }
+                }
+
                 input_line_pointer = str;
                 expression(&exp);
 
