@@ -44,8 +44,11 @@ lookup_opcode(struct favor_op_info *table, size_t size, uint32_t funct) {
 
 static void
 pr_cond(struct favor_dis_info *info, uint32_t conditional) {
-    if(conditional) {
+    if(conditional == 1) {
         FPRINTF("?");
+    }
+    else if(conditional == 2) {
+        FPRINTF("~");
     }
     else {
         FPRINTF(" ");

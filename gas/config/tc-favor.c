@@ -103,7 +103,7 @@ skip_whitespace(char *str) {
 
 static char*
 skip_opcode(char *str) {
-    while(!is_whitespace(*str) && (*str != '.') && (*str != '?') && (*str != ',') && !is_end_of_line(*str)) ++str;
+    while(!is_whitespace(*str) && (*str != '.') && (*str != '?') && (*str != '~') && (*str != ',') && !is_end_of_line(*str)) ++str;
     return str;
 }
 
@@ -373,8 +373,9 @@ md_assemble(char *str) {
     op_beg = (str = skip_whitespace(str));
     op_end = (str = skip_opcode(str));
 
-#define PARSE_CONDITIONAL() do { \
+#define PARSE_CONDITIONAL(enable_negated) do { \
     if(*str == '?') { conditional = 1; str++; } \
+    if(enable_negated && (*str == '~')) { conditional = 2; str++; } \
 } while(0)
 
 #define PARSE_TY(spec) do { \
@@ -393,13 +394,13 @@ md_assemble(char *str) {
 
         switch(op_info->parser) {
             case PARSE_SINGLETON: {
-                PARSE_CONDITIONAL();
+                PARSE_CONDITIONAL(false);
                 insn = mk_singleton(conditional, op_info->funct);
                 break;
             }
             case PARSE_3ARG: {
                 PARSE_TY(spec_num);
-                PARSE_CONDITIONAL();
+                PARSE_CONDITIONAL(false);
 
                 op_info = lookup_type(op_info, ty.type);
                 if(!op_info) break;
@@ -414,12 +415,11 @@ md_assemble(char *str) {
                 break;
             }
             case PARSE_JUMP: {
-                PARSE_CONDITIONAL();
                 insn.p_opcode = OP_JUMP;
                 insn.jump.and_link = 0;
                 insn.jump.funct = op_info->funct;
                 insn.jump.immediate = 0; // fixup
-
+                
                 if(*str == '.') {
                     str++;
                     if(*str == 'l') {
@@ -429,6 +429,20 @@ md_assemble(char *str) {
                     else {
                         as_bad("Unexpected postfix after jump instruction.");
                     }
+                }
+
+                PARSE_CONDITIONAL(true);
+
+                if(conditional && op_info->funct > J_BGEU) {
+                    as_bad("Jump type an only be represented as unconditional.");
+                }
+                if(conditional == 1) {
+                    // Regular conditional -- these are 0-9, so subtract 20.
+                    insn.jump.funct -= 20;
+                }
+                if(conditional == 2) {
+                    // Inverted conditional -- these are 10-19, so subtract 10.
+                    insn.jump.funct -= 10;
                 }
 
                 input_line_pointer = str;
@@ -445,7 +459,7 @@ md_assemble(char *str) {
             }
             case PARSE_PSUEDO_LI: {
                 PARSE_TY(spec_li);
-                PARSE_CONDITIONAL();
+                PARSE_CONDITIONAL(false);
 
                 input_line_pointer = str;
                 if(!parse_reg_into(&str, &dst, false, ty.f)) {
