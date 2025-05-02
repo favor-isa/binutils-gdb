@@ -44,7 +44,8 @@ FAVOR_OP_TABLE_DEFINE(singleton,
 )
 
 FAVOR_OP_TABLE_DEFINE(psuedo,
-    { .parser = PARSE_PSUEDO_LI, .name = "li" }
+    { .parser = PARSE_PSUEDO_LI, .name = "li" },
+    { .parser = PARSE_PSUEDO_RET, .name = "ret" }
 )
 
 // For jump opcodes, the and-link is represent by ., e.g. j.l

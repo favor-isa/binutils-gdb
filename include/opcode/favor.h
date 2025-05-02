@@ -23,6 +23,7 @@ enum favor_op_parse {
     PARSE_SINGLETON,
     PARSE_SINGLETON_TYPED,
     PARSE_JUMP,
+    PARSE_PSUEDO_RET,
 };
 
 enum favor_op_type {
@@ -561,12 +562,12 @@ struct insn {
 
 static inline
 struct insn
-mk_singleton(uint32_t conditional, uint32_t funct) {
+mk_singleton(uint32_t conditional, uint32_t funct, uint32_t is_return) {
     struct insn result = {0};
     result.p_opcode = POP_SINGLETON;
     result.singleton.conditional = conditional;
     result.singleton.funct = funct;
-    result.singleton.is_return = 0;
+    result.singleton.is_return = is_return;
     return result;
 }
 

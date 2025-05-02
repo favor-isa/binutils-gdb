@@ -375,6 +375,7 @@ lookup_type(struct favor_op_info *chain, uint32_t type) {
 void
 md_assemble(char *str) {
     uint32_t conditional = 0;
+    uint32_t is_return = 0;
     char *op_beg, *op_end;
     struct insn insn = {0};
     struct favor_op_info *op_info;
@@ -387,6 +388,12 @@ md_assemble(char *str) {
     
     /* For now, if we find 'a' on the string, output 4 bytes.. */
 
+    /* We must allocate the frag_more before reparse_insn due to how ret works.
+     * Note that this means all instructions should be aware that 4 bytes have
+     * already been allocated (which the li logic is right now). */
+    where = frag_more (4);
+
+reparse_insn:
     op_beg = (str = skip_whitespace(str));
     op_end = (str = skip_opcode(str));
 
@@ -407,12 +414,27 @@ md_assemble(char *str) {
     *op_end = was;
 
     if(op_info) {
-        where = frag_more (4);
+        
 
         switch(op_info->parser) {
+            case PARSE_PSUEDO_RET: {
+                if(*str == '.') {
+                    str++;
+                    is_return = 1;
+                    goto reparse_insn;
+                }
+                else {
+                    // Nop return.
+                    is_return = 1;
+                    op_info = &favor_op_singleton[1];
+                    goto parse_singleton;
+                }
+                break;
+            }
             case PARSE_SINGLETON: {
+parse_singleton:
                 PARSE_CONDITIONAL(false);
-                insn = mk_singleton(conditional, op_info->funct);
+                insn = mk_singleton(conditional, op_info->funct, is_return);
                 break;
             }
             case PARSE_3ARG: {
@@ -523,6 +545,11 @@ md_assemble(char *str) {
                     RELAX_LD);
 
                 return;
+            }
+        }
+        if(is_return) {
+            if(insn.p_opcode != POP_SINGLETON && insn.p_opcode != OP_MISC) {
+                as_bad("Instruction cannot be used as a return instruction.");
             }
         }
         output(where, favor_encode(insn));

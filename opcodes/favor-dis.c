@@ -140,6 +140,9 @@ print_insn_favor(bfd_vma addr, struct disassemble_info *dis_info) {
         case POP_SINGLETON: {
             struct favor_op_info *op = LOOKUP_OPCODE(singleton, insn.singleton.funct);
             if(!op) goto bad_op;
+            if(insn.singleton.is_return) {
+                pr_opname(info, "ret.");
+            }
             pr_opname(info, op->name);
             pr_cond(info, insn.singleton.conditional);
             break;
