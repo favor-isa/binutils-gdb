@@ -372,6 +372,11 @@ sim_engine_run (SIM_DESC sd,
                         break;
                   }
                 }
+
+                if(insn.singleton.is_return) {
+                  CPU_PC_SET(scpu, cpu->gpr[REG_LA] & ~0x3ULL);
+                  // We leave do_increment_pc on to move past the jump instruction.
+                }
                 break;
             case POP_I3:
                 switch(insn.int3.funct) {
