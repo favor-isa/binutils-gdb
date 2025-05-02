@@ -384,8 +384,6 @@ md_assemble(char *str) {
     struct ty ty;
     expressionS exp;
     char *where = NULL;
-
-    // printf("line = [%s]\n", str);
     
     /* For now, if we find 'a' on the string, output 4 bytes.. */
 
@@ -505,8 +503,6 @@ md_assemble(char *str) {
                     as_bad("Expected comma after destination."); return;
                 }
                 str++;
-
-                printf("got reg: %u\n", dst);
 
                 // Now there are two options. Both are handled by expression().
                 // 1. We have a `constant number` expression.
@@ -867,7 +863,6 @@ sz_16:
     //valueT old = fragp->fr_fix;
     if(do_output) {
         fragp->fr_fix = (uintptr_t)li.where - (uintptr_t)fragp->fr_literal;
-        printf("final size: %lu\n", fragp->fr_fix);
     }
     return li.bytes_written - 4;
 }
